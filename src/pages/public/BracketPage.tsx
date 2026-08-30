@@ -20,7 +20,13 @@ import type { BracketGroup, BracketGroupTree, Event } from '../../types/api';
 type BracketData = BracketGroup[] | BracketGroupTree[];
 
 type TeamSlot = BracketGroup['teams'][number] | null;
-type LegacyBracketMatch = { id: string; home: TeamSlot; away: TeamSlot };
+type LegacyBracketMatch = {
+  id: string;
+  home: TeamSlot;
+  away: TeamSlot;
+  homeSetsWon?: number;
+  awaySetsWon?: number;
+};
 type LegacyBracketRound = { title: string; matches: LegacyBracketMatch[] };
 
 function isTreeBracket(data: BracketData): data is BracketGroupTree[] {
@@ -74,6 +80,8 @@ function treeToLegacyRounds(group: BracketGroupTree): LegacyBracketRound[] {
         match.awayTeamId != null
           ? { teamId: match.awayTeamId, teamName: match.awayTeamName ?? '', logo: match.awayTeamLogo, displayOrder: 0 }
           : null,
+      homeSetsWon: match.homeSetsWon,
+      awaySetsWon: match.awaySetsWon,
     })),
   }));
 }
@@ -151,6 +159,7 @@ interface MatchRowProps {
   mutedColor: string;
   hoverColor: string;
   selectedColor: string;
+  setsWon?: number;
 }
 
 function MatchRow({
@@ -163,6 +172,7 @@ function MatchRow({
   mutedColor,
   hoverColor,
   selectedColor,
+  setsWon,
 }: Readonly<MatchRowProps>) {
   return (
     <Box
@@ -184,6 +194,9 @@ function MatchRow({
       <Avatar src={team?.logo ?? undefined} variant="rounded" sx={{ width: 22, height: 22, flexShrink: 0 }} />
       <Typography noWrap sx={{ flex: 1, color: team ? textColor : mutedColor, fontSize: 13, fontWeight: 700 }}>
         {team?.teamName ?? 'TBD'}
+      </Typography>
+      <Typography sx={{ color: mutedColor, fontSize: 12, fontWeight: 700, minWidth: 18, textAlign: 'right' }}>
+        {setsWon ?? 0}
       </Typography>
     </Box>
   );
@@ -220,11 +233,11 @@ function BracketMatchCard({
         height: CARD_H,
         bgcolor: surface,
         border: `1px solid ${dividerColor}`,
-          borderRadius: 1.5,
+        borderRadius: 0,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-          boxShadow: '0 4px 16px rgba(15, 23, 42, 0.05)',
+        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.05)',
       }}
     >
       <MatchRow
@@ -237,6 +250,7 @@ function BracketMatchCard({
         mutedColor={mutedColor}
         hoverColor={hoverColor}
         selectedColor={selectedRowColor}
+        setsWon={match.homeSetsWon}
       />
       <Divider flexItem sx={{ borderColor: dividerColor }} />
       <MatchRow
@@ -249,6 +263,7 @@ function BracketMatchCard({
         mutedColor={mutedColor}
         hoverColor={alpha('#1565c0', 0.06)}
         selectedColor={selectedRowColor}
+        setsWon={match.awaySetsWon}
       />
     </Box>
   );
