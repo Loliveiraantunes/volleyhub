@@ -3,7 +3,7 @@ import {
   Avatar,
   Box,
   Button,
-  Grid,
+  Divider,
   IconButton,
   Paper,
   Stack,
@@ -21,6 +21,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { matchService } from '../../services/matchService';
 import { teamService } from '../../services/teamService';
 import type { Match, MatchSetRequest, Team } from '../../types/api';
+import { formatDateTime } from '../../utils/format';
 
 export function MatchSummaryPage() {
   const { id } = useParams();
@@ -118,6 +119,8 @@ export function MatchSummaryPage() {
   if (loading) return <Loading />;
   if (!match || !homeTeam || !awayTeam) return null;
 
+  const hasMeta = match.court || match.scheduledAt;
+
   return (
     <Box>
       <PageHeader
@@ -129,83 +132,199 @@ export function MatchSummaryPage() {
         }
       />
 
-      <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
-        <Stack alignItems="center" spacing={1} sx={{ mb: 2 }}>
-          <StatusBadge status={match.status} />
-        </Stack>
-        <Stack direction="row" alignItems="center" justifyContent="center" spacing={3}>
-          <Stack alignItems="center" spacing={1} flex={1}>
-            <Avatar src={homeTeam.logo ?? undefined} variant="rounded" sx={{ width: 56, height: 56 }} />
-            <Typography fontWeight={700} textAlign="center">
-              {homeTeam.name}
-            </Typography>
+      <Paper variant="outlined" sx={{ mb: 3, overflow: 'hidden' }}>
+        {hasMeta && (
+          <Box
+            sx={{
+              px: 3,
+              py: 1.25,
+              bgcolor: 'rgba(21,101,192,0.04)',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <StatusBadge status={match.status} />
+            <Stack direction="row" spacing={2.5} divider={<Divider orientation="vertical" flexItem />}>
+              {match.court && (
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  {match.court}
+                </Typography>
+              )}
+              {match.scheduledAt && (
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  {formatDateTime(match.scheduledAt)}
+                </Typography>
+              )}
+            </Stack>
+          </Box>
+        )}
+
+        <Box sx={{ px: 3, py: hasMeta ? 4 : 3 }}>
+          {!hasMeta && (
+            <Stack alignItems="center" sx={{ mb: 2.5 }}>
+              <StatusBadge status={match.status} />
+            </Stack>
+          )}
+          <Stack direction="row" alignItems="center" justifyContent="center" spacing={4}>
+            <Stack alignItems="center" spacing={1.5} flex={1}>
+              <Avatar src={homeTeam.logo ?? undefined} variant="rounded" sx={{ width: 72, height: 72 }} />
+              <Typography variant="h6" fontWeight={800} textAlign="center">
+                {homeTeam.name}
+              </Typography>
+            </Stack>
+
+            <Stack alignItems="center" spacing={0.5}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <Typography
+                  variant="h1"
+                  fontWeight={900}
+                  color={homeSetsWon > awaySetsWon ? 'primary.main' : 'text.secondary'}
+                  sx={{ lineHeight: 1 }}
+                >
+                  {homeSetsWon}
+                </Typography>
+                <Typography variant="h4" color="text.disabled" fontWeight={300}>
+                  ×
+                </Typography>
+                <Typography
+                  variant="h1"
+                  fontWeight={900}
+                  color={awaySetsWon > homeSetsWon ? 'primary.main' : 'text.secondary'}
+                  sx={{ lineHeight: 1 }}
+                >
+                  {awaySetsWon}
+                </Typography>
+              </Stack>
+              <Typography
+                variant="caption"
+                color="text.disabled"
+                fontWeight={700}
+                sx={{ textTransform: 'uppercase', letterSpacing: 1.5 }}
+              >
+                sets
+              </Typography>
+            </Stack>
+
+            <Stack alignItems="center" spacing={1.5} flex={1}>
+              <Avatar src={awayTeam.logo ?? undefined} variant="rounded" sx={{ width: 72, height: 72 }} />
+              <Typography variant="h6" fontWeight={800} textAlign="center">
+                {awayTeam.name}
+              </Typography>
+            </Stack>
           </Stack>
-          <Typography variant="h3" fontWeight={800}>
-            {homeSetsWon}
-          </Typography>
-          <Typography variant="h4" color="text.secondary">
-            ×
-          </Typography>
-          <Typography variant="h3" fontWeight={800}>
-            {awaySetsWon}
-          </Typography>
-          <Stack alignItems="center" spacing={1} flex={1}>
-            <Avatar src={awayTeam.logo ?? undefined} variant="rounded" sx={{ width: 56, height: 56 }} />
-            <Typography fontWeight={700} textAlign="center">
-              {awayTeam.name}
-            </Typography>
-          </Stack>
-        </Stack>
+        </Box>
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 3 }}>
-        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-          Sets
-        </Typography>
-        <Stack spacing={2}>
-          {sets.map((set, index) => (
-            <Grid container spacing={2} alignItems="center" key={index}>
-              <Grid item xs={2} sm={1}>
-                <Typography fontWeight={700}>Set {set.setNumber}</Typography>
-              </Grid>
-              <Grid item xs={4} sm={3}>
-                <TextField
-                  type="number"
-                  label={homeTeam.name}
-                  size="small"
-                  fullWidth
-                  value={set.homePoints}
-                  onChange={(e) => updateSet(index, 'homePoints', Number(e.target.value))}
-                />
-              </Grid>
-              <Grid item xs={4} sm={3}>
-                <TextField
-                  type="number"
-                  label={awayTeam.name}
-                  size="small"
-                  fullWidth
-                  value={set.awayPoints}
-                  onChange={(e) => updateSet(index, 'awayPoints', Number(e.target.value))}
-                />
-              </Grid>
-              <Grid item xs={2} sm={1}>
-                <IconButton color="error" onClick={() => removeSet(index)}>
-                  <DeleteIcon />
-                </IconButton>
-              </Grid>
-            </Grid>
-          ))}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2.5 }}>
+          <Typography variant="subtitle1" fontWeight={700}>
+            Sets ({sets.length})
+          </Typography>
+          <Button size="small" startIcon={<AddIcon />} onClick={addSet}>
+            Adicionar set
+          </Button>
         </Stack>
 
-        <Button startIcon={<AddIcon />} onClick={addSet} sx={{ mt: 2 }}>
-          Adicionar set
-        </Button>
+        {sets.length > 0 && (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '56px 1fr auto 1fr 40px',
+              alignItems: 'center',
+              gap: 1,
+              px: 1,
+              mb: 0.5,
+            }}
+          >
+            <div />
+            <Typography variant="caption" fontWeight={700} color="text.secondary" textAlign="center" noWrap>
+              {homeTeam.name}
+            </Typography>
+            <div />
+            <Typography variant="caption" fontWeight={700} color="text.secondary" textAlign="center" noWrap>
+              {awayTeam.name}
+            </Typography>
+            <div />
+          </Box>
+        )}
 
-        <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
+        <Stack spacing={1}>
+          {sets.map((set, index) => {
+            const homeWon = set.homePoints > set.awayPoints;
+            const awayWon = set.awayPoints > set.homePoints;
+            return (
+              <Box
+                key={set.setNumber}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: '56px 1fr auto 1fr 40px',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 1,
+                  py: 0.75,
+                  borderRadius: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'background.default',
+                }}
+              >
+                <Typography variant="caption" fontWeight={700} color="text.secondary">
+                  Set {set.setNumber}
+                </Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  value={set.homePoints}
+                  onChange={(e) => updateSet(index, 'homePoints', Number(e.target.value))}
+                  slotProps={{
+                    htmlInput: {
+                      min: 0,
+                      style: { textAlign: 'center', fontWeight: homeWon ? 800 : 400 },
+                    },
+                  }}
+                />
+                <Typography color="text.disabled" sx={{ px: 0.5 }}>
+                  ×
+                </Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  value={set.awayPoints}
+                  onChange={(e) => updateSet(index, 'awayPoints', Number(e.target.value))}
+                  slotProps={{
+                    htmlInput: {
+                      min: 0,
+                      style: { textAlign: 'center', fontWeight: awayWon ? 800 : 400 },
+                    },
+                  }}
+                />
+                <IconButton size="small" color="error" onClick={() => removeSet(index)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            );
+          })}
+        </Stack>
+
+        {sets.length === 0 && (
+          <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 3 }}>
+            Nenhum set registrado ainda. Clique em “Adicionar set” para começar.
+          </Typography>
+        )}
+
+        <Stack direction="row" justifyContent="flex-end" spacing={2} sx={{ mt: 4 }}>
           <Button variant="outlined" onClick={saveProgress} disabled={saving}>
             Salvar
           </Button>
-          <Button variant="contained" color="success" onClick={() => setConfirmOpen(true)} disabled={saving || sets.length === 0}>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={() => setConfirmOpen(true)}
+            disabled={saving || sets.length === 0}
+          >
             Finalizar súmula
           </Button>
         </Stack>

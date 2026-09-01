@@ -22,20 +22,20 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import dayjs from 'dayjs';
 import { PageHeader } from '../../components/PageHeader';
 import { Loading } from '../../components/Loading';
 import { EmptyState } from '../../components/EmptyState';
 import { GroupCard } from '../../components/GroupCard';
-import { MatchCard } from '../../components/MatchCard';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { StatusBadge } from '../../components/StatusBadge';
 import { groupService } from '../../services/groupService';
 import { matchService } from '../../services/matchService';
 import { teamService } from '../../services/teamService';
 import type { GroupStage, Match, Team } from '../../types/api';
+import { formatDateTime } from '../../utils/format';
 
 interface PendingPair {
   key: string;
@@ -52,7 +52,6 @@ interface PendingPair {
 
 export function GroupsPage() {
   const { eventId } = useParams();
-  const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
   const [groups, setGroups] = useState<GroupStage[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -568,44 +567,84 @@ export function GroupsPage() {
                 </Box>
                 <Box sx={{ bgcolor: 'background.default', p: 2 }}>
                   <Stack spacing={1}>
-                    {groupMatches.map((match) => (
-                      <Box key={match.id} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <MatchCard
-                            match={match}
-                            homeTeamName={teamsById.get(match.homeTeamId)?.name ?? `Equipe #${match.homeTeamId}`}
-                            awayTeamName={teamsById.get(match.awayTeamId)?.name ?? `Equipe #${match.awayTeamId}`}
-                            onClick={() => navigate(`/admin/matches/${match.id}`)}
-                          />
+                    {groupMatches.map((match) => {
+                      const homeTeam = teamsById.get(match.homeTeamId);
+                      const awayTeam = teamsById.get(match.awayTeamId);
+                      return (
+                        <Box
+                          key={match.id}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            px: 2,
+                            py: 1.25,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1.5,
+                            bgcolor: 'background.paper',
+                            transition: 'border-color 0.15s, box-shadow 0.15s',
+                            '&:hover': {
+                              borderColor: alpha(theme.palette.primary.main, 0.3),
+                              boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.06)}`,
+                            },
+                          }}
+                        >
+                          <Box sx={{ flexShrink: 0 }}>
+                            <StatusBadge status={match.status} />
+                          </Box>
+
+                          <Stack direction="row" alignItems="center" spacing={1} flex={1} justifyContent="flex-end" sx={{ minWidth: 0 }}>
+                            <Typography noWrap fontWeight={700} variant="body2">
+                              {homeTeam?.name ?? `Equipe #${match.homeTeamId}`}
+                            </Typography>
+                            <Avatar src={homeTeam?.logo ?? undefined} variant="rounded" sx={{ width: 28, height: 28, flexShrink: 0 }} />
+                          </Stack>
+
+                          <Box sx={{ flexShrink: 0, textAlign: 'center', minWidth: 52 }}>
+                            <Typography variant="h6" fontWeight={900} lineHeight={1}>
+                              {match.homeSetsWon}
+                              <Typography component="span" color="text.disabled" sx={{ mx: 0.5, fontWeight: 400 }}>×</Typography>
+                              {match.awaySetsWon}
+                            </Typography>
+                          </Box>
+
+                          <Stack direction="row" alignItems="center" spacing={1} flex={1} sx={{ minWidth: 0 }}>
+                            <Avatar src={awayTeam?.logo ?? undefined} variant="rounded" sx={{ width: 28, height: 28, flexShrink: 0 }} />
+                            <Typography noWrap fontWeight={700} variant="body2">
+                              {awayTeam?.name ?? `Equipe #${match.awayTeamId}`}
+                            </Typography>
+                          </Stack>
+
+                          {(match.scheduledAt || match.court) && (
+                            <Stack sx={{ flexShrink: 0, minWidth: 110, display: { xs: 'none', md: 'flex' } }} alignItems="flex-end">
+                              {match.scheduledAt && (
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                  {formatDateTime(match.scheduledAt)}
+                                </Typography>
+                              )}
+                              {match.court && (
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                  {match.court}
+                                </Typography>
+                              )}
+                            </Stack>
+                          )}
+
+                          <Stack direction="row" spacing={0.25} flexShrink={0}>
+                            <IconButton size="small" color="info" title="Súmula" onClick={() => openSummary(match)}>
+                              <AssignmentIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" color="primary" title="Editar confronto" onClick={() => openEditMatch(match)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" color="error" title="Excluir confronto" onClick={() => setDeleteMatchTarget(match.id)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
                         </Box>
-                        <IconButton
-                          size="small"
-                          color="info"
-                          sx={{ mt: 1, flexShrink: 0 }}
-                          title="Súmula"
-                          onClick={() => openSummary(match)}
-                        >
-                          <AssignmentIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          sx={{ mt: 1, flexShrink: 0 }}
-                          title="Editar confronto"
-                          onClick={() => openEditMatch(match)}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          sx={{ mt: 1, flexShrink: 0 }}
-                          onClick={() => setDeleteMatchTarget(match.id)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ))}
+                      );
+                    })}
                   </Stack>
                 </Box>
               </Paper>
