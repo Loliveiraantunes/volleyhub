@@ -1,6 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { alpha } from '@mui/material/styles';
-import { Avatar, Box, Button, Collapse, Container, Divider, IconButton, Paper, Stack, Typography, useTheme } from '@mui/material';
+import {
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  Collapse,
+  Container,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  IconButton,
+  Paper,
+  Stack,
+  Typography,
+  useTheme,
+} from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
 import LinkIcon from '@mui/icons-material/Link';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
@@ -9,6 +25,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PlaceIcon from '@mui/icons-material/Place';
 import ScheduleIcon from '@mui/icons-material/Schedule';
+import CloseIcon from '@mui/icons-material/Close';
 import { useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import html2canvas from 'html2canvas';
@@ -99,8 +116,8 @@ function treeToLegacyRounds(group: BracketGroupTree): LegacyBracketRound[] {
   }));
 }
 
-const CARD_H = 88;
-const CARD_GAP = 14;
+const CARD_H = 90;
+const CARD_GAP = 50;
 const COL_W = 220;
 const COL_GAP = 40;
 const ROUND_TITLES = ['Opening round', 'Upper semi-finals', 'Upper final', 'Final'];
@@ -195,10 +212,16 @@ function MatchRow({
 }: Readonly<MatchRowProps>) {
   return (
     <Box
-      onClick={() => team && onTeamClick(groupId, team.teamId)}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (team) onTeamClick(groupId, team.teamId);
+      }}
       sx={{
         flex: 1,
-        px: 1.25,
+        px: 2,
+        py: 0.8,
+        minHeight: 40,
+        maxHeight: 50,
         display: 'flex',
         alignItems: 'center',
         gap: 1,
@@ -206,11 +229,10 @@ function MatchRow({
         bgcolor: isSelected ? selectedColor : resolveRowBg(false, isTop),
         cursor: team ? 'pointer' : 'default',
         transition: 'background-color 0.15s',
-        minHeight: 0,
         '&:hover': team ? { bgcolor: hoverColor } : undefined,
       }}
     >
-      <Avatar src={team?.logo ?? undefined} variant="rounded" sx={{ width: 22, height: 22, flexShrink: 0 }} />
+      <Avatar src={team?.logo ?? undefined} variant="rounded" sx={{ width: 24, height: 24, flexShrink: 0 }} />
       <Typography noWrap sx={{ flex: 1, color: team ? textColor : mutedColor, fontSize: 13, fontWeight: 700 }}>
         {team?.teamName ?? 'TBD'}
       </Typography>
@@ -226,6 +248,7 @@ interface BracketMatchCardProps {
   groupId: number;
   selectedTeamId: number | null;
   onTeamClick: (groupId: number, teamId: number) => void;
+  onMatchClick: (match: LegacyBracketMatch, groupId: number) => void;
   surface: string;
   dividerColor: string;
   textColor: string;
@@ -239,6 +262,7 @@ function BracketMatchCard({
   groupId,
   selectedTeamId,
   onTeamClick,
+  onMatchClick,
   surface,
   dividerColor,
   textColor,
@@ -248,16 +272,24 @@ function BracketMatchCard({
 }: Readonly<BracketMatchCardProps>) {
   return (
     <Box
+      onClick={() => onMatchClick(match, groupId)}
       sx={{
         height: 'auto',
         minHeight: CARD_H,
         bgcolor: surface,
         border: `1px solid ${dividerColor}`,
-        borderRadius: 0,
+        borderRadius: 1,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.05)',
+        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.04)',
+        cursor: 'pointer',
+        transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
+        '&:hover': {
+          transform: 'translateY(-1px)',
+          boxShadow: '0 8px 20px rgba(21, 101, 192, 0.08)',
+          borderColor: alpha('#1565c0', 0.2),
+        },
       }}
     >
       <MatchRow
@@ -290,17 +322,15 @@ function BracketMatchCard({
         setsWon={match.awaySetsWon}
       />
       {match.status !== 'FINISHED' && (match.court || match.scheduledAt) && (
-        <Box sx={{ px: 1.25, py: 0.75, borderTop: `1px solid ${dividerColor}`, bgcolor: alpha('#000000', 0.02) }}>
-          <Stack spacing={0.4}>
+        <Box sx={{ px: 1.25, py: 0.75, borderTop: `1px solid ${dividerColor}`, bgcolor: alpha('#1565c0', 0.02) }}>
+          <Stack  sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
             {match.court && (
               <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
-                <PlaceIcon fontSize="small" />
                 <Typography variant="caption" sx={{ fontSize: 11, color: mutedColor }}>{match.court}</Typography>
               </Stack>
             )}
             {match.scheduledAt && (
               <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
-                <ScheduleIcon fontSize="small" />
                 <Typography variant="caption" sx={{ fontSize: 11, color: mutedColor }}>
                   {formatDateTime(match.scheduledAt)}
                 </Typography>
@@ -372,9 +402,10 @@ interface GroupBracketProps {
   group: BracketGroup | BracketGroupTree;
   selectedTeamId: number | null;
   onTeamClick: (groupId: number, teamId: number) => void;
+  onMatchClick: (match: LegacyBracketMatch, groupId: number) => void;
 }
 
-function GroupBracket({ group, selectedTeamId, onTeamClick }: Readonly<GroupBracketProps>) {
+function GroupBracket({ group, selectedTeamId, onTeamClick, onMatchClick }: Readonly<GroupBracketProps>) {
   const theme = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const rounds = 'rounds' in group ? treeToLegacyRounds(group) : buildRoundsFromGroup(group);
@@ -382,7 +413,6 @@ function GroupBracket({ group, selectedTeamId, onTeamClick }: Readonly<GroupBrac
   const totalH = openingCount > 0 ? openingCount * (CARD_H + CARD_GAP) - CARD_GAP : 0;
   const totalW = rounds.length * COL_W + (rounds.length - 1) * COL_GAP;
   const surface = theme.palette.background.paper;
-  const surfaceSoft = alpha(theme.palette.primary.main, 0.04);
   const dividerColor = theme.palette.divider;
   const textColor = theme.palette.text.primary;
   const mutedColor = theme.palette.text.secondary;
@@ -396,7 +426,7 @@ function GroupBracket({ group, selectedTeamId, onTeamClick }: Readonly<GroupBrac
         sx={{
           px: 2.5,
           py: 1.5,
-          bgcolor: surfaceSoft,
+          background: 'linear-gradient(135deg, rgba(21,101,192,0.08), rgba(21,101,192,0.02))',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -405,16 +435,18 @@ function GroupBracket({ group, selectedTeamId, onTeamClick }: Readonly<GroupBrac
           borderBottom: collapsed ? 'none' : `1px solid ${dividerColor}`,
         }}
       >
-        <Typography sx={{ color: textColor, fontWeight: 800, fontSize: 15 }}>
-          {group.groupName}
-        </Typography>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography sx={{ color: textColor, fontWeight: 800, fontSize: 15 }}>
+            {group.groupName}
+          </Typography>
+        </Stack>
         <IconButton size="small" sx={{ color: mutedColor, p: 0.5 }} disableRipple>
           {collapsed ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
         </IconButton>
       </Box>
 
       <Collapse in={!collapsed}>
-        <Box sx={{ bgcolor: theme.palette.background.default, p: 2.5, overflowX: 'auto' }}>
+        <Box sx={{ bgcolor: theme.palette.background.default, p: 2.5, overflowX: 'auto', minHeight: (totalH * 2), maxHeight:1000 }}>
           {rounds.length === 0 ? (
             <Typography sx={{ color: mutedColor, fontSize: 13 }}>
               Sem equipes cadastradas neste grupo.
@@ -456,6 +488,7 @@ function GroupBracket({ group, selectedTeamId, onTeamClick }: Readonly<GroupBrac
                         groupId={group.groupId}
                         selectedTeamId={selectedTeamId}
                         onTeamClick={onTeamClick}
+                        onMatchClick={onMatchClick}
                         surface={surface}
                         dividerColor={dividerColor}
                         textColor={textColor}
@@ -484,6 +517,8 @@ export function BracketPage() {
   const [bracket, setBracket] = useState<BracketGroupTree[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<LegacyBracketMatch | null>(null);
+  const [selectedMatchGroupName, setSelectedMatchGroupName] = useState<string>('');
   const captureRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -530,6 +565,12 @@ export function BracketPage() {
     setSelectedTeamId((prev) => (prev === teamId ? null : teamId));
   };
 
+  const handleMatchClick = (match: LegacyBracketMatch, groupId: number) => {
+    const group = bracket.find((item) => item.groupId === groupId);
+    setSelectedMatch(match);
+    setSelectedMatchGroupName(group?.groupName ?? 'Grupo');
+  };
+
   if (loading) return <Loading />;
   if (!event) return <EmptyState title="Evento não encontrado" />;
 
@@ -574,10 +615,80 @@ export function BracketPage() {
               group={group}
               selectedTeamId={selectedTeamId}
               onTeamClick={handleTeamClick}
+              onMatchClick={handleMatchClick}
             />
           ))}
         </Stack>
       )}
+
+      <Dialog open={Boolean(selectedMatch)} onClose={() => setSelectedMatch(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+              Detalhes da partida
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {selectedMatchGroupName}
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={() => setSelectedMatch(null)} aria-label="Fechar dialog">
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedMatch && (
+            <Stack spacing={1.5}>
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  Equipe 1
+                </Typography>
+                <Typography fontWeight={700}>{selectedMatch.home?.teamName ?? 'TBD'}</Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  Equipe 2
+                </Typography>
+                <Typography fontWeight={700}>{selectedMatch.away?.teamName ?? 'TBD'}</Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  Placar
+                </Typography>
+                <Typography fontWeight={700}>
+                  {selectedMatch.homeSetsWon ?? 0} × {selectedMatch.awaySetsWon ?? 0}
+                </Typography>
+              </Box>
+
+              {selectedMatch.court && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Local
+                  </Typography>
+                  <Typography fontWeight={700}>{selectedMatch.court}</Typography>
+                </Box>
+              )}
+
+              {selectedMatch.scheduledAt && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Data/Hora
+                  </Typography>
+                  <Typography fontWeight={700}>{formatDateTime(selectedMatch.scheduledAt)}</Typography>
+                </Box>
+              )}
+
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  Status
+                </Typography>
+                <Chip label={selectedMatch.status ?? 'SCHEDULED'} color={selectedMatch.status === 'FINISHED' ? 'success' : 'primary'} size="small" />
+              </Box>
+            </Stack>
+          )}
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 }

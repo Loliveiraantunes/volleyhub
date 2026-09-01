@@ -7,7 +7,7 @@ export function formatDate(date?: string | null): string {
 
 export function formatDateTime(date?: string | null): string {
   if (!date) return '-';
-  return dayjs(date).format('DD/MM/YYYY [às] HH:mm');
+  return dayjs(date).format('DD/MM - HH:mm');
 }
 
 export function formatCurrency(value?: number | null): string {
