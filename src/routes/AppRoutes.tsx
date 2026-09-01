@@ -20,6 +20,7 @@ import { EventPage } from '../pages/public/EventPage';
 import { RegistrationPage } from '../pages/public/RegistrationPage';
 import { TeamPage } from '../pages/public/TeamPage';
 import { BracketPage } from '../pages/public/BracketPage';
+import { MatchPage } from '../pages/public/MatchPage';
 import { PublicStandingsPage } from '../pages/public/PublicStandingsPage';
 
 export function AppRoutes() {
@@ -31,6 +32,7 @@ export function AppRoutes() {
         <Route path="/event/:slug/inscricao" element={<RegistrationPage />} />
         <Route path="/event/:slug/equipe/:teamId" element={<TeamPage />} />
         <Route path="/event/:slug/chave" element={<BracketPage />} />
+        <Route path="/event/:slug/partida/:matchId" element={<MatchPage />} />
         <Route path="/event/:slug/classificacao" element={<PublicStandingsPage />} />
       </Route>
 

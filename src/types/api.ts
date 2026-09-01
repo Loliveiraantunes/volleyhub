@@ -105,6 +105,46 @@ export interface MatchSetRequest {
   awayPoints: number;
 }
 
+export interface MatchSetDetailResponse {
+  setNumber: number;
+  homePoints: number;
+  awayPoints: number;
+}
+
+export interface PlayerDetailResponse {
+  id: number;
+  fullName: string;
+  cpf?: string | null;
+  birthDate?: string | null;
+}
+
+export interface TechnicalStaffDetailResponse {
+  id: number;
+  fullName: string;
+  role: string;
+}
+
+export interface TeamDetailResponse {
+  teamId: number;
+  teamName: string;
+  teamLogo?: string | null;
+  players: PlayerDetailResponse[];
+  technicalStaff: TechnicalStaffDetailResponse[];
+}
+
+export interface MatchDetailResponse {
+  matchId: number;
+  status: MatchStatus;
+  scheduledAt?: string | null;
+  court?: string | null;
+  homeSetsWon: number;
+  awaySetsWon: number;
+  homeTeam: TeamDetailResponse;
+  awayTeam: TeamDetailResponse;
+  sets: MatchSetDetailResponse[];
+  winnerTeamId?: number | null;
+}
+
 export interface Match {
   id: number;
   eventId: number;
@@ -161,6 +201,7 @@ export type BracketSlot = 'HOME' | 'AWAY' | null;
 
 export interface BracketMatch {
   matchId: number;
+  sourceMatchId: number;
   homeTeamId: number | null;
   awayTeamId: number | null;
   homeTeamName: string | null;

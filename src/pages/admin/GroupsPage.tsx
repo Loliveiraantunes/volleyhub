@@ -18,8 +18,10 @@ import {
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import dayjs from 'dayjs';
@@ -29,6 +31,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { GroupCard } from '../../components/GroupCard';
 import { MatchCard } from '../../components/MatchCard';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { StatusBadge } from '../../components/StatusBadge';
 import { groupService } from '../../services/groupService';
 import { matchService } from '../../services/matchService';
 import { teamService } from '../../services/teamService';
@@ -67,6 +70,19 @@ export function GroupsPage() {
   const [pendingPairs, setPendingPairs] = useState<PendingPair[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [deleteMatchTarget, setDeleteMatchTarget] = useState<number | null>(null);
+  const [editingMatch, setEditingMatch] = useState<Match | null>(null);
+  const [editMatchData, setEditMatchData] = useState({
+    groupId: '' as number | '',
+    homeTeamId: '' as number | '',
+    awayTeamId: '' as number | '',
+    scheduledAt: '',
+    court: '',
+  });
+  const [savingMatch, setSavingMatch] = useState(false);
+  const [summaryMatch, setSummaryMatch] = useState<Match | null>(null);
+  const [summarySets, setSummarySets] = useState<Array<{ setNumber: number; homePoints: number; awayPoints: number }>>([]);
+  const [savingSummary, setSavingSummary] = useState(false);
+  const [confirmFinalizeOpen, setConfirmFinalizeOpen] = useState(false);
 
   const load = () => {
     if (!eventId) return;
@@ -281,6 +297,119 @@ export function GroupsPage() {
     }
   };
 
+  const openEditMatch = (match: Match) => {
+    setEditingMatch(match);
+    setEditMatchData({
+      groupId: match.groupId ?? '',
+      homeTeamId: match.homeTeamId,
+      awayTeamId: match.awayTeamId,
+      scheduledAt: match.scheduledAt ? dayjs(match.scheduledAt).format('YYYY-MM-DDTHH:mm') : '',
+      court: match.court ?? '',
+    });
+  };
+
+  const updateEditMatchData = (field: keyof typeof editMatchData, value: string | number) => {
+    setEditMatchData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveMatch = async () => {
+    if (!editingMatch || editMatchData.homeTeamId === '' || editMatchData.awayTeamId === '') return;
+    if (editMatchData.homeTeamId === editMatchData.awayTeamId) {
+      enqueueSnackbar('As equipes do confronto devem ser diferentes.', { variant: 'warning' });
+      return;
+    }
+
+    setSavingMatch(true);
+    try {
+      const updated = await matchService.update(editingMatch.id, {
+        groupId: editMatchData.groupId === '' ? null : editMatchData.groupId,
+        homeTeamId: editMatchData.homeTeamId,
+        awayTeamId: editMatchData.awayTeamId,
+        scheduledAt: editMatchData.scheduledAt ? dayjs(editMatchData.scheduledAt).toISOString() : null,
+        court: editMatchData.court || null,
+        status: editingMatch.status,
+        sets: editingMatch.sets.map((set) => ({
+          setNumber: set.setNumber,
+          homePoints: set.homePoints,
+          awayPoints: set.awayPoints,
+        })),
+      });
+      setMatches((prev) => prev.map((match) => (match.id === updated.id ? updated : match)));
+      setEditingMatch(null);
+      enqueueSnackbar('Confronto atualizado.', { variant: 'success' });
+    } catch (err) {
+      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível atualizar o confronto.', {
+        variant: 'error',
+      });
+    } finally {
+      setSavingMatch(false);
+    }
+  };
+
+  const openSummary = (match: Match) => {
+    setSummaryMatch(match);
+    setSummarySets(match.sets.map((s) => ({ setNumber: s.setNumber, homePoints: s.homePoints, awayPoints: s.awayPoints })));
+  };
+
+  const addSummarySet = () => {
+    setSummarySets((prev) => [...prev, { setNumber: prev.length + 1, homePoints: 0, awayPoints: 0 }]);
+  };
+
+  const removeSummarySet = (index: number) => {
+    setSummarySets((prev) => prev.filter((_, i) => i !== index).map((s, i) => ({ ...s, setNumber: i + 1 })));
+  };
+
+  const updateSummarySet = (index: number, field: 'homePoints' | 'awayPoints', value: number) => {
+    setSummarySets((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
+  };
+
+  const handleSaveSummary = async () => {
+    if (!summaryMatch) return;
+    setSavingSummary(true);
+    try {
+      const updated = await matchService.update(summaryMatch.id, {
+        groupId: summaryMatch.groupId,
+        homeTeamId: summaryMatch.homeTeamId,
+        awayTeamId: summaryMatch.awayTeamId,
+        scheduledAt: summaryMatch.scheduledAt,
+        court: summaryMatch.court,
+        status: summaryMatch.status === 'SCHEDULED' && summarySets.length > 0 ? 'IN_PROGRESS' : summaryMatch.status,
+        sets: summarySets,
+      });
+      setSummaryMatch(updated);
+      setMatches((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      enqueueSnackbar('Súmula salva.', { variant: 'success' });
+    } catch (err) {
+      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível salvar a súmula.', { variant: 'error' });
+    } finally {
+      setSavingSummary(false);
+    }
+  };
+
+  const handleFinalizeSummary = async () => {
+    if (!summaryMatch) return;
+    setSavingSummary(true);
+    try {
+      const updated = await matchService.update(summaryMatch.id, {
+        groupId: summaryMatch.groupId,
+        homeTeamId: summaryMatch.homeTeamId,
+        awayTeamId: summaryMatch.awayTeamId,
+        scheduledAt: summaryMatch.scheduledAt,
+        court: summaryMatch.court,
+        status: 'FINISHED',
+        sets: summarySets,
+      });
+      setSummaryMatch(updated);
+      setMatches((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      setConfirmFinalizeOpen(false);
+      enqueueSnackbar('Súmula finalizada. Classificação e resultado atualizados.', { variant: 'success' });
+    } catch (err) {
+      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível finalizar a súmula.', { variant: 'error' });
+    } finally {
+      setSavingSummary(false);
+    }
+  };
+
   const updatePendingPair = (key: string, field: 'date' | 'time' | 'court', value: string) => {
     setPendingPairs((prev) => prev.map((p) => (p.key === key ? { ...p, [field]: value } : p)));
   };
@@ -449,6 +578,24 @@ export function GroupsPage() {
                             onClick={() => navigate(`/admin/matches/${match.id}`)}
                           />
                         </Box>
+                        <IconButton
+                          size="small"
+                          color="info"
+                          sx={{ mt: 1, flexShrink: 0 }}
+                          title="Súmula"
+                          onClick={() => openSummary(match)}
+                        >
+                          <AssignmentIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          sx={{ mt: 1, flexShrink: 0 }}
+                          title="Editar confronto"
+                          onClick={() => openEditMatch(match)}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
                         <IconButton
                           size="small"
                           color="error"
@@ -667,6 +814,198 @@ export function GroupsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog open={!!editingMatch} onClose={() => !savingMatch && setEditingMatch(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Editar confronto</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ pt: 0.5 }}>
+            <TextField
+              select
+              label="Grupo"
+              fullWidth
+              value={editMatchData.groupId}
+              onChange={(e) => updateEditMatchData('groupId', e.target.value === '' ? '' : Number(e.target.value))}
+            >
+              <MenuItem value="">Sem grupo</MenuItem>
+              {[...groups]
+                .sort((a, b) => a.displayOrder - b.displayOrder)
+                .map((group) => (
+                  <MenuItem key={group.id} value={group.id}>
+                    {group.name}
+                  </MenuItem>
+                ))}
+            </TextField>
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                select
+                label="Equipe A"
+                fullWidth
+                value={editMatchData.homeTeamId}
+                onChange={(e) => updateEditMatchData('homeTeamId', Number(e.target.value))}
+              >
+                {teams.map((team) => (
+                  <MenuItem key={team.id} value={team.id}>
+                    {team.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Equipe B"
+                fullWidth
+                value={editMatchData.awayTeamId}
+                onChange={(e) => updateEditMatchData('awayTeamId', Number(e.target.value))}
+              >
+                {teams.map((team) => (
+                  <MenuItem key={team.id} value={team.id}>
+                    {team.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label="Data e horário"
+                type="datetime-local"
+                fullWidth
+                value={editMatchData.scheduledAt}
+                onChange={(e) => updateEditMatchData('scheduledAt', e.target.value)}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+              <TextField
+                label="Local"
+                fullWidth
+                value={editMatchData.court}
+                onChange={(e) => updateEditMatchData('court', e.target.value)}
+              />
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEditingMatch(null)} disabled={savingMatch}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveMatch}
+            disabled={
+              savingMatch ||
+              editMatchData.homeTeamId === '' ||
+              editMatchData.awayTeamId === '' ||
+              editMatchData.homeTeamId === editMatchData.awayTeamId
+            }
+          >
+            {savingMatch ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!summaryMatch}
+        onClose={() => !savingSummary && setSummaryMatch(null)}
+        maxWidth="sm"
+        fullWidth
+        scroll="paper"
+      >
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <span>Súmula</span>
+            {summaryMatch && (
+              <StatusBadge status={summaryMatch.status} />
+            )}
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          {summaryMatch && (() => {
+            const homeTeam = teamsById.get(summaryMatch.homeTeamId);
+            const awayTeam = teamsById.get(summaryMatch.awayTeamId);
+            const homeSetsWon = summarySets.filter((s) => s.homePoints > s.awayPoints).length;
+            const awaySetsWon = summarySets.filter((s) => s.awayPoints > s.homePoints).length;
+            return (
+              <Stack spacing={3} sx={{ pt: 0.5 }}>
+                <Stack direction="row" alignItems="center" justifyContent="center" spacing={2}>
+                  <Stack alignItems="center" spacing={0.5} flex={1}>
+                    <Avatar src={homeTeam?.logo ?? undefined} variant="rounded" sx={{ width: 44, height: 44 }} />
+                    <Typography fontWeight={700} textAlign="center" variant="body2">
+                      {homeTeam?.name ?? `Equipe #${summaryMatch.homeTeamId}`}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="h4" fontWeight={900}>
+                    {homeSetsWon} × {awaySetsWon}
+                  </Typography>
+                  <Stack alignItems="center" spacing={0.5} flex={1}>
+                    <Avatar src={awayTeam?.logo ?? undefined} variant="rounded" sx={{ width: 44, height: 44 }} />
+                    <Typography fontWeight={700} textAlign="center" variant="body2">
+                      {awayTeam?.name ?? `Equipe #${summaryMatch.awayTeamId}`}
+                    </Typography>
+                  </Stack>
+                </Stack>
+
+                <Stack spacing={1.5}>
+                  {summarySets.map((set, index) => (
+                    <Stack key={set.setNumber} direction="row" spacing={1.5} alignItems="center">
+                      <Typography fontWeight={700} sx={{ minWidth: 48 }}>Set {set.setNumber}</Typography>
+                      <TextField
+                        type="number"
+                        label={homeTeam?.name ?? 'Casa'}
+                        size="small"
+                        value={set.homePoints}
+                        onChange={(e) => updateSummarySet(index, 'homePoints', Math.max(0, Number(e.target.value)))}
+                        sx={{ flex: 1 }}
+                        slotProps={{ htmlInput: { min: 0 } }}
+                      />
+                      <TextField
+                        type="number"
+                        label={awayTeam?.name ?? 'Fora'}
+                        size="small"
+                        value={set.awayPoints}
+                        onChange={(e) => updateSummarySet(index, 'awayPoints', Math.max(0, Number(e.target.value)))}
+                        sx={{ flex: 1 }}
+                        slotProps={{ htmlInput: { min: 0 } }}
+                      />
+                      <IconButton size="small" color="error" onClick={() => removeSummarySet(index)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  ))}
+                </Stack>
+
+                <Button startIcon={<AddIcon />} onClick={addSummarySet} size="small" sx={{ alignSelf: 'flex-start' }}>
+                  Adicionar set
+                </Button>
+              </Stack>
+            );
+          })()}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setSummaryMatch(null)} disabled={savingSummary}>
+            Fechar
+          </Button>
+          <Button variant="outlined" onClick={handleSaveSummary} disabled={savingSummary}>
+            {savingSummary ? 'Salvando...' : 'Salvar'}
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={() => setConfirmFinalizeOpen(true)}
+            disabled={savingSummary || summarySets.length === 0}
+          >
+            Finalizar súmula
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <ConfirmDialog
+        open={confirmFinalizeOpen}
+        title="Finalizar súmula"
+        description="Após finalizar, o resultado será registrado e a classificação será atualizada. Deseja continuar?"
+        confirmLabel="Finalizar"
+        loading={savingSummary}
+        onConfirm={handleFinalizeSummary}
+        onClose={() => setConfirmFinalizeOpen(false)}
+      />
 
       <ConfirmDialog
         open={!!deleteTarget}

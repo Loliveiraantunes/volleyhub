@@ -4,16 +4,13 @@ import {
   Avatar,
   Box,
   Button,
-  Chip,
   Collapse,
   Container,
-  Dialog,
-  DialogContent,
-  DialogTitle,
   Divider,
   IconButton,
   Paper,
   Stack,
+  Tooltip,
   Typography,
   useTheme,
 } from '@mui/material';
@@ -23,10 +20,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import ImageIcon from '@mui/icons-material/Image';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import PlaceIcon from '@mui/icons-material/Place';
-import ScheduleIcon from '@mui/icons-material/Schedule';
-import CloseIcon from '@mui/icons-material/Close';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -42,6 +36,7 @@ type BracketData = BracketGroup[] | BracketGroupTree[];
 type TeamSlot = BracketGroup['teams'][number] | null;
 type LegacyBracketMatch = {
   id: string;
+  sourceMatchId: number;
   home: TeamSlot;
   away: TeamSlot;
   homeSetsWon?: number;
@@ -98,6 +93,7 @@ function treeToLegacyRounds(group: BracketGroupTree): LegacyBracketRound[] {
     title: round.roundName,
     matches: round.matches.map((match) => ({
       id: String(match.matchId),
+      sourceMatchId: match.sourceMatchId,
       home:
         match.homeTeamId != null
           ? { teamId: match.homeTeamId, teamName: match.homeTeamName ?? '', logo: match.homeTeamLogo, displayOrder: 0 }
@@ -132,6 +128,7 @@ function buildRoundsFromGroup(group: BracketGroup): LegacyBracketRound[] {
   for (let i = 0; i < sorted.length; i += 2) {
     opening.push({
       id: `g${group.groupId}-r0-${i}`,
+      sourceMatchId: i,
       home: sorted[i] ?? null,
       away: sorted[i + 1] ?? null,
       scheduledAt: null,
@@ -183,39 +180,27 @@ function resolveTeamBorderColor(team: TeamSlot, isFinished: boolean, isWinner: b
 
 interface MatchRowProps {
   team: TeamSlot;
-  groupId: number;
   isTop: boolean;
-  isSelected: boolean;
   isFinished: boolean;
   isWinner: boolean;
-  onTeamClick: (groupId: number, teamId: number) => void;
   textColor: string;
   mutedColor: string;
   hoverColor: string;
-  selectedColor: string;
   setsWon?: number;
 }
 
 function MatchRow({
   team,
-  groupId,
   isTop,
-  isSelected,
   isFinished,
   isWinner,
-  onTeamClick,
   textColor,
   mutedColor,
   hoverColor,
-  selectedColor,
   setsWon,
 }: Readonly<MatchRowProps>) {
   return (
     <Box
-      onClick={(event) => {
-        event.stopPropagation();
-        if (team) onTeamClick(groupId, team.teamId);
-      }}
       sx={{
         flex: 1,
         px: 2,
@@ -226,10 +211,10 @@ function MatchRow({
         alignItems: 'center',
         gap: 1,
         borderLeft: `3px solid ${resolveTeamBorderColor(team, isFinished, isWinner)}`,
-        bgcolor: isSelected ? selectedColor : resolveRowBg(false, isTop),
-        cursor: team ? 'pointer' : 'default',
+        bgcolor: resolveRowBg(false, isTop),
+        cursor: 'default',
         transition: 'background-color 0.15s',
-        '&:hover': team ? { bgcolor: hoverColor } : undefined,
+        '&:hover': { bgcolor: hoverColor },
       }}
     >
       <Avatar src={team?.logo ?? undefined} variant="rounded" sx={{ width: 24, height: 24, flexShrink: 0 }} />
@@ -245,101 +230,180 @@ function MatchRow({
 
 interface BracketMatchCardProps {
   match: LegacyBracketMatch;
-  groupId: number;
-  selectedTeamId: number | null;
-  onTeamClick: (groupId: number, teamId: number) => void;
-  onMatchClick: (match: LegacyBracketMatch, groupId: number) => void;
+  onMatchClick: (sourceMatchId: number) => void;
   surface: string;
   dividerColor: string;
   textColor: string;
   mutedColor: string;
   hoverColor: string;
-  selectedRowColor: string;
 }
 
 function BracketMatchCard({
   match,
-  groupId,
-  selectedTeamId,
-  onTeamClick,
   onMatchClick,
   surface,
   dividerColor,
   textColor,
   mutedColor,
   hoverColor,
-  selectedRowColor,
 }: Readonly<BracketMatchCardProps>) {
-  return (
+  const tooltipContent = (
     <Box
-      onClick={() => onMatchClick(match, groupId)}
       sx={{
-        height: 'auto',
-        minHeight: CARD_H,
-        bgcolor: surface,
-        border: `1px solid ${dividerColor}`,
-        borderRadius: 1,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.04)',
-        cursor: 'pointer',
-        transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
-        '&:hover': {
-          transform: 'translateY(-1px)',
-          boxShadow: '0 8px 20px rgba(21, 101, 192, 0.08)',
-          borderColor: alpha('#1565c0', 0.2),
+        minWidth: 230,
+        p: 1.25,
+        borderRadius: 2,
+        bgcolor: '#ffffff',
+        color: '#1f2937',
+        border: '1px solid rgba(21, 101, 192, 0.18)',
+        boxShadow: '0 12px 28px rgba(21, 101, 192, 0.12)',
+      }}
+    >
+      <Typography
+        variant="caption"
+        sx={{
+          color: '#1565c0',
+          display: 'block',
+          mb: 1,
+          fontWeight: 800,
+          letterSpacing: 0.5,
+          textTransform: 'uppercase',
+        }}
+      >
+        Detalhes da partida
+      </Typography>
+
+      <Stack spacing={0.8}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Equipe 1</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.8125rem' }}>{match.home?.teamName ?? 'TBD'}</Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Equipe 2</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.8125rem' }}>{match.away?.teamName ?? 'TBD'}</Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Placar</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 800, color: '#1565c0', fontSize: '0.8125rem' }}>
+            {match.homeSetsWon ?? 0} × {match.awaySetsWon ?? 0}
+          </Typography>
+        </Box>
+
+        {match.court && (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Local</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.8125rem' }}>{match.court}</Typography>
+          </Box>
+        )}
+
+        {match.scheduledAt && (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Data/Hora</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.8125rem' }}>{formatDateTime(match.scheduledAt)}</Typography>
+          </Box>
+        )}
+
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Status</Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 700,
+              color: match.status === 'FINISHED' ? '#2e7d32' : '#1565c0',
+              fontSize: '0.8125rem',
+            }}
+          >
+            {match.status ?? 'SCHEDULED'}
+          </Typography>
+        </Box>
+      </Stack>
+    </Box>
+  );
+
+  return (
+    <Tooltip
+      title={tooltipContent}
+      arrow
+      placement="top"
+      disableInteractive
+      slotProps={{
+        tooltip: {
+          sx: {
+            bgcolor: 'transparent',
+            p: 0,
+            maxWidth: 'none',
+          },
         },
       }}
     >
-      <MatchRow
-        team={match.home}
-        groupId={groupId}
-        isTop
-        isSelected={match.home?.teamId === selectedTeamId}
-        isFinished={match.status === 'FINISHED'}
-        isWinner={match.winnerTeamId != null && match.home?.teamId === match.winnerTeamId}
-        onTeamClick={onTeamClick}
-        textColor={textColor}
-        mutedColor={mutedColor}
-        hoverColor={hoverColor}
-        selectedColor={selectedRowColor}
-        setsWon={match.homeSetsWon}
-      />
-      <Divider flexItem sx={{ borderColor: dividerColor }} />
-      <MatchRow
-        team={match.away}
-        groupId={groupId}
-        isTop={false}
-        isSelected={match.away?.teamId === selectedTeamId}
-        isFinished={match.status === 'FINISHED'}
-        isWinner={match.winnerTeamId != null && match.away?.teamId === match.winnerTeamId}
-        onTeamClick={onTeamClick}
-        textColor={textColor}
-        mutedColor={mutedColor}
-        hoverColor={alpha('#1565c0', 0.06)}
-        selectedColor={selectedRowColor}
-        setsWon={match.awaySetsWon}
-      />
-      {match.status !== 'FINISHED' && (match.court || match.scheduledAt) && (
-        <Box sx={{ px: 1.25, py: 0.75, borderTop: `1px solid ${dividerColor}`, bgcolor: alpha('#1565c0', 0.02) }}>
-          <Stack  sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-            {match.court && (
-              <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
-                <Typography variant="caption" sx={{ fontSize: 11, color: mutedColor }}>{match.court}</Typography>
-              </Stack>
-            )}
-            {match.scheduledAt && (
-              <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
-                <Typography variant="caption" sx={{ fontSize: 11, color: mutedColor }}>
-                  {formatDateTime(match.scheduledAt)}
-                </Typography>
-              </Stack>
-            )}
-          </Stack>
-        </Box>
-      )}
-    </Box>
+      <Box
+        onClick={() => {
+          if (match.sourceMatchId) {
+            onMatchClick(match.sourceMatchId);
+          }
+        }}
+        sx={{
+          height: 'auto',
+          minHeight: CARD_H,
+          bgcolor: surface,
+          border: `1px solid ${dividerColor}`,
+          borderRadius: 1,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 4px 12px rgba(15, 23, 42, 0.04)',
+          cursor: 'pointer',
+          transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
+          '&:hover': {
+            transform: 'translateY(-1px)',
+            boxShadow: '0 8px 20px rgba(21, 101, 192, 0.08)',
+            borderColor: alpha('#1565c0', 0.2),
+          },
+        }}
+      >
+        <MatchRow
+          team={match.home}
+          isTop
+          isFinished={match.status === 'FINISHED'}
+          isWinner={match.winnerTeamId != null && match.home?.teamId === match.winnerTeamId}
+          textColor={textColor}
+          mutedColor={mutedColor}
+          hoverColor={hoverColor}
+          setsWon={match.homeSetsWon}
+        />
+        <Divider flexItem sx={{ borderColor: dividerColor }} />
+        <MatchRow
+          team={match.away}
+          isTop={false}
+          isFinished={match.status === 'FINISHED'}
+          isWinner={match.winnerTeamId != null && match.away?.teamId === match.winnerTeamId}
+          textColor={textColor}
+          mutedColor={mutedColor}
+          hoverColor={alpha('#1565c0', 0.06)}
+          setsWon={match.awaySetsWon}
+        />
+        {match.status !== 'FINISHED' && (match.court || match.scheduledAt) && (
+          <Box sx={{ px: 1.25, py: 0.75, borderTop: `1px solid ${dividerColor}`, bgcolor: alpha('#1565c0', 0.02) }}>
+            <Stack sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
+              {match.court && (
+                <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
+                  <Typography variant="caption" sx={{ fontSize: 11, color: mutedColor }}>{match.court}</Typography>
+                </Stack>
+              )}
+              {match.scheduledAt && (
+                <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
+                  <Typography variant="caption" sx={{ fontSize: 11, color: mutedColor }}>
+                    {formatDateTime(match.scheduledAt)}
+                  </Typography>
+                </Stack>
+              )}
+            </Stack>
+          </Box>
+        )}
+      </Box>
+    </Tooltip>
   );
 }
 
@@ -400,12 +464,10 @@ function ConnectorLines({ rounds }: Readonly<{ rounds: LegacyBracketRound[] }>) 
 
 interface GroupBracketProps {
   group: BracketGroup | BracketGroupTree;
-  selectedTeamId: number | null;
-  onTeamClick: (groupId: number, teamId: number) => void;
-  onMatchClick: (match: LegacyBracketMatch, groupId: number) => void;
+  onMatchClick: (matchId: number) => void;
 }
 
-function GroupBracket({ group, selectedTeamId, onTeamClick, onMatchClick }: Readonly<GroupBracketProps>) {
+function GroupBracket({ group, onMatchClick }: Readonly<GroupBracketProps>) {
   const theme = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const rounds = 'rounds' in group ? treeToLegacyRounds(group) : buildRoundsFromGroup(group);
@@ -417,8 +479,6 @@ function GroupBracket({ group, selectedTeamId, onTeamClick, onMatchClick }: Read
   const textColor = theme.palette.text.primary;
   const mutedColor = theme.palette.text.secondary;
   const hoverColor = alpha(theme.palette.primary.main, 0.06);
-  const selectedRowColor = alpha(theme.palette.primary.main, 0.08);
-
   return (
     <Paper variant="outlined" sx={{ overflow: 'hidden', borderColor: dividerColor }}>
       <Box
@@ -485,16 +545,12 @@ function GroupBracket({ group, selectedTeamId, onTeamClick, onMatchClick }: Read
                     >
                       <BracketMatchCard
                         match={match}
-                        groupId={group.groupId}
-                        selectedTeamId={selectedTeamId}
-                        onTeamClick={onTeamClick}
                         onMatchClick={onMatchClick}
                         surface={surface}
                         dividerColor={dividerColor}
                         textColor={textColor}
                         mutedColor={mutedColor}
                         hoverColor={hoverColor}
-                        selectedRowColor={selectedRowColor}
                       />
                     </Box>
                   )),
@@ -511,14 +567,12 @@ function GroupBracket({ group, selectedTeamId, onTeamClick, onMatchClick }: Read
 
 export function BracketPage() {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
   const [event, setEvent] = useState<Event | null>(null);
   const [bracket, setBracket] = useState<BracketGroupTree[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
-  const [selectedMatch, setSelectedMatch] = useState<LegacyBracketMatch | null>(null);
-  const [selectedMatchGroupName, setSelectedMatchGroupName] = useState<string>('');
   const captureRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -561,14 +615,9 @@ export function BracketPage() {
     pdf.save(`chave-${slug}.pdf`);
   };
 
-  const handleTeamClick = (groupId: number, teamId: number) => {
-    setSelectedTeamId((prev) => (prev === teamId ? null : teamId));
-  };
-
-  const handleMatchClick = (match: LegacyBracketMatch, groupId: number) => {
-    const group = bracket.find((item) => item.groupId === groupId);
-    setSelectedMatch(match);
-    setSelectedMatchGroupName(group?.groupName ?? 'Grupo');
+  const handleMatchClick = (sourceMatchId: number) => {
+    if (!slug) return;
+    navigate(`/event/${slug}/partida/${sourceMatchId}`);
   };
 
   if (loading) return <Loading />;
@@ -613,82 +662,11 @@ export function BracketPage() {
             <GroupBracket
               key={group.groupId}
               group={group}
-              selectedTeamId={selectedTeamId}
-              onTeamClick={handleTeamClick}
               onMatchClick={handleMatchClick}
             />
           ))}
         </Stack>
       )}
-
-      <Dialog open={Boolean(selectedMatch)} onClose={() => setSelectedMatch(null)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>
-              Detalhes da partida
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              {selectedMatchGroupName}
-            </Typography>
-          </Box>
-          <IconButton size="small" onClick={() => setSelectedMatch(null)} aria-label="Fechar dialog">
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {selectedMatch && (
-            <Stack spacing={1.5}>
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Equipe 1
-                </Typography>
-                <Typography fontWeight={700}>{selectedMatch.home?.teamName ?? 'TBD'}</Typography>
-              </Box>
-
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Equipe 2
-                </Typography>
-                <Typography fontWeight={700}>{selectedMatch.away?.teamName ?? 'TBD'}</Typography>
-              </Box>
-
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Placar
-                </Typography>
-                <Typography fontWeight={700}>
-                  {selectedMatch.homeSetsWon ?? 0} × {selectedMatch.awaySetsWon ?? 0}
-                </Typography>
-              </Box>
-
-              {selectedMatch.court && (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Local
-                  </Typography>
-                  <Typography fontWeight={700}>{selectedMatch.court}</Typography>
-                </Box>
-              )}
-
-              {selectedMatch.scheduledAt && (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Data/Hora
-                  </Typography>
-                  <Typography fontWeight={700}>{formatDateTime(selectedMatch.scheduledAt)}</Typography>
-                </Box>
-              )}
-
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Status
-                </Typography>
-                <Chip label={selectedMatch.status ?? 'SCHEDULED'} color={selectedMatch.status === 'FINISHED' ? 'success' : 'primary'} size="small" />
-              </Box>
-            </Stack>
-          )}
-        </DialogContent>
-      </Dialog>
     </Container>
   );
 }

@@ -12,7 +12,6 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import LockIcon from '@mui/icons-material/Lock';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { PageHeader } from '../../components/PageHeader';
@@ -34,8 +33,6 @@ export function MatchSummaryPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  const isFinished = match?.status === 'FINISHED';
 
   const load = () => {
     if (!id) return;
@@ -177,7 +174,6 @@ export function MatchSummaryPage() {
                   label={homeTeam.name}
                   size="small"
                   fullWidth
-                  disabled={isFinished}
                   value={set.homePoints}
                   onChange={(e) => updateSet(index, 'homePoints', Number(e.target.value))}
                 />
@@ -188,43 +184,30 @@ export function MatchSummaryPage() {
                   label={awayTeam.name}
                   size="small"
                   fullWidth
-                  disabled={isFinished}
                   value={set.awayPoints}
                   onChange={(e) => updateSet(index, 'awayPoints', Number(e.target.value))}
                 />
               </Grid>
               <Grid item xs={2} sm={1}>
-                {!isFinished && (
-                  <IconButton color="error" onClick={() => removeSet(index)}>
-                    <DeleteIcon />
-                  </IconButton>
-                )}
+                <IconButton color="error" onClick={() => removeSet(index)}>
+                  <DeleteIcon />
+                </IconButton>
               </Grid>
             </Grid>
           ))}
         </Stack>
 
-        {!isFinished && (
-          <Button startIcon={<AddIcon />} onClick={addSet} sx={{ mt: 2 }}>
-            Adicionar set
-          </Button>
-        )}
+        <Button startIcon={<AddIcon />} onClick={addSet} sx={{ mt: 2 }}>
+          Adicionar set
+        </Button>
 
         <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
-          {isFinished ? (
-            <Typography color="text.secondary" display="flex" alignItems="center" gap={1}>
-              <LockIcon fontSize="small" /> Súmula finalizada. Edição bloqueada.
-            </Typography>
-          ) : (
-            <>
-              <Button variant="outlined" onClick={saveProgress} disabled={saving}>
-                Salvar
-              </Button>
-              <Button variant="contained" color="success" onClick={() => setConfirmOpen(true)} disabled={saving || sets.length === 0}>
-                Finalizar súmula
-              </Button>
-            </>
-          )}
+          <Button variant="outlined" onClick={saveProgress} disabled={saving}>
+            Salvar
+          </Button>
+          <Button variant="contained" color="success" onClick={() => setConfirmOpen(true)} disabled={saving || sets.length === 0}>
+            Finalizar súmula
+          </Button>
         </Stack>
       </Paper>
 
