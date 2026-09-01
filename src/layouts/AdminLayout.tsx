@@ -23,10 +23,9 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import EventIcon from '@mui/icons-material/Event';
 import GroupsIcon from '@mui/icons-material/Groups';
-import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import SettingsIcon from '@mui/icons-material/Settings';
-import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -51,7 +50,6 @@ export function AdminLayout() {
     { label: 'Eventos', icon: <EventIcon />, to: '/admin/events' },
     { label: 'Equipes', icon: <GroupsIcon />, to: eventId ? `/admin/events/${eventId}/teams` : '/admin/events', disabled: !eventId },
     { label: 'Grupos', icon: <ViewModuleIcon />, to: eventId ? `/admin/events/${eventId}/groups` : '/admin/events', disabled: !eventId },
-    { label: 'Confrontos', icon: <SportsVolleyballIcon />, to: eventId ? `/admin/events/${eventId}/matches` : '/admin/events', disabled: !eventId },
     { label: 'Classificação', icon: <LeaderboardIcon />, to: eventId ? `/admin/events/${eventId}/standings` : '/admin/events', disabled: !eventId },
     { label: 'Configurações', icon: <SettingsIcon />, to: '/admin/settings/categories' },
   ];

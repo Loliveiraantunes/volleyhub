@@ -1,30 +1,55 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { alpha } from '@mui/material/styles';
 import {
+  Avatar,
   Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Grid,
+  Divider,
+  IconButton,
   MenuItem,
+  Paper,
   Stack,
   TextField,
+  Typography,
+  useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { useParams } from 'react-router-dom';
+import CheckIcon from '@mui/icons-material/Check';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
+import dayjs from 'dayjs';
 import { PageHeader } from '../../components/PageHeader';
 import { Loading } from '../../components/Loading';
 import { EmptyState } from '../../components/EmptyState';
 import { GroupCard } from '../../components/GroupCard';
+import { MatchCard } from '../../components/MatchCard';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { groupService } from '../../services/groupService';
+import { matchService } from '../../services/matchService';
 import { teamService } from '../../services/teamService';
-import type { GroupStage, Team } from '../../types/api';
+import type { GroupStage, Match, Team } from '../../types/api';
+
+interface PendingPair {
+  key: string;
+  groupId: number;
+  groupName: string;
+  homeTeamId: number;
+  homeName: string;
+  awayTeamId: number;
+  awayName: string;
+  date: string;
+  time: string;
+  court: string;
+}
 
 export function GroupsPage() {
   const { eventId } = useParams();
+  const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
   const [groups, setGroups] = useState<GroupStage[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -35,14 +60,26 @@ export function GroupsPage() {
   const [deleteTarget, setDeleteTarget] = useState<GroupStage | null>(null);
   const [addTeamDialog, setAddTeamDialog] = useState<GroupStage | null>(null);
   const [teamToAdd, setTeamToAdd] = useState<number | ''>('');
+  const [draggedTeamId, setDraggedTeamId] = useState<number | null>(null);
+  const [generatingMatches, setGeneratingMatches] = useState(false);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [pendingPairs, setPendingPairs] = useState<PendingPair[]>([]);
+  const [confirming, setConfirming] = useState(false);
+  const [deleteMatchTarget, setDeleteMatchTarget] = useState<number | null>(null);
 
   const load = () => {
     if (!eventId) return;
     setLoading(true);
-    Promise.all([groupService.listByEvent(Number(eventId)), teamService.listByEvent(Number(eventId))])
-      .then(([g, t]) => {
+    Promise.all([
+      groupService.listByEvent(Number(eventId)),
+      teamService.listByEvent(Number(eventId)),
+      matchService.listByEvent(Number(eventId)),
+    ])
+      .then(([g, t, m]) => {
         setGroups(g);
         setTeams(t.filter((team) => team.registrationStatus === 'APPROVED'));
+        setMatches(m);
       })
       .finally(() => setLoading(false));
   };
@@ -50,6 +87,18 @@ export function GroupsPage() {
   useEffect(load, [eventId]);
 
   const teamsById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
+
+  // maps each assigned teamId to its current group
+  const groupByTeamId = useMemo(() => {
+    const map = new Map<number, GroupStage>();
+    groups.forEach((g) => g.teams.forEach((t) => map.set(t.teamId, g)));
+    return map;
+  }, [groups]);
+
+  const ungroupedTeams = useMemo(
+    () => teams.filter((t) => !groupByTeamId.has(t.id)),
+    [teams, groupByTeamId],
+  );
 
   const openCreate = () => {
     setEditingGroup(null);
@@ -141,49 +190,339 @@ export function GroupsPage() {
     }
   };
 
+  const handleDropTeam = async (targetGroup: GroupStage) => {
+    if (draggedTeamId === null) return;
+    const sourceGroup = groupByTeamId.get(draggedTeamId);
+    if (sourceGroup?.id === targetGroup.id) return;
+    try {
+      if (sourceGroup) {
+        await groupService.removeTeam(sourceGroup.id, draggedTeamId);
+      }
+      await groupService.addTeam(targetGroup.id, draggedTeamId, targetGroup.teams.length);
+      enqueueSnackbar('Equipe movida.', { variant: 'success' });
+      load();
+    } catch (err) {
+      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível mover a equipe.', {
+        variant: 'error',
+      });
+    } finally {
+      setDraggedTeamId(null);
+    }
+  };
+
+  const generateGroupMatches = async () => {
+    if (!eventId) return;
+    setGeneratingMatches(true);
+    try {
+      const existing = await matchService.listByEvent(Number(eventId));
+      // groups that already have any match are skipped to avoid conflicting with bracket matches
+      const groupsWithMatches = new Set(existing.filter((m) => m.groupId != null).map((m) => m.groupId));
+      const existingKeys = new Set(
+        existing
+          .filter((m) => m.groupId != null)
+          .map((m) => `${m.groupId}:${Math.min(m.homeTeamId, m.awayTeamId)}:${Math.max(m.homeTeamId, m.awayTeamId)}`),
+      );
+      const today = dayjs().format('YYYY-MM-DD');
+      const pairs: PendingPair[] = [];
+      for (const group of groups) {
+        if (groupsWithMatches.has(group.id)) continue;
+        const sorted = [...group.teams].sort((a, b) => a.displayOrder - b.displayOrder);
+        for (let i = 0; i + 1 < sorted.length; i += 2) {
+          const home = sorted[i].teamId;
+          const away = sorted[i + 1].teamId;
+          const key = `${group.id}:${Math.min(home, away)}:${Math.max(home, away)}`;
+          if (existingKeys.has(key)) continue;
+          pairs.push({
+            key,
+            groupId: group.id,
+            groupName: group.name,
+            homeTeamId: home,
+            homeName: teamsById.get(home)?.name ?? `Equipe #${home}`,
+            awayTeamId: away,
+            awayName: teamsById.get(away)?.name ?? `Equipe #${away}`,
+            date: today,
+            time: '',
+            court: '',
+          });
+        }
+      }
+      if (pairs.length === 0) {
+        enqueueSnackbar(
+          groupsWithMatches.size > 0
+            ? 'Os grupos já possuem confrontos. Exclua os incorretos e gere novamente se necessário.'
+            : 'Nenhum confronto novo necessário.',
+          { variant: 'info' },
+        );
+        return;
+      }
+      setPendingPairs(pairs);
+      setGenerateDialogOpen(true);
+    } catch (err) {
+      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível verificar os confrontos.', {
+        variant: 'error',
+      });
+    } finally {
+      setGeneratingMatches(false);
+    }
+  };
+
+  const handleDeleteMatch = async () => {
+    if (deleteMatchTarget === null) return;
+    try {
+      await matchService.remove(deleteMatchTarget);
+      setMatches((prev) => prev.filter((m) => m.id !== deleteMatchTarget));
+      enqueueSnackbar('Confronto excluído.', { variant: 'success' });
+    } catch (err) {
+      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível excluir o confronto.', {
+        variant: 'error',
+      });
+    } finally {
+      setDeleteMatchTarget(null);
+    }
+  };
+
+  const updatePendingPair = (key: string, field: 'date' | 'time' | 'court', value: string) => {
+    setPendingPairs((prev) => prev.map((p) => (p.key === key ? { ...p, [field]: value } : p)));
+  };
+
+  const confirmGenerateMatches = async () => {
+    if (!eventId) return;
+    setConfirming(true);
+    try {
+      for (const pair of pendingPairs) {
+        const scheduledAt = pair.time
+          ? dayjs(`${pair.date}T${pair.time}`).toISOString()
+          : `${pair.date}T00:00:00.000Z`;
+        await matchService.create(Number(eventId), {
+          groupId: pair.groupId,
+          homeTeamId: pair.homeTeamId,
+          awayTeamId: pair.awayTeamId,
+          scheduledAt,
+          court: pair.court || null,
+          status: 'SCHEDULED',
+          sets: [],
+        });
+      }
+      enqueueSnackbar(`${pendingPairs.length} confronto(s) gerado(s).`, { variant: 'success' });
+      setGenerateDialogOpen(false);
+      const updated = await matchService.listByEvent(Number(eventId));
+      setMatches(updated);
+    } catch (err) {
+      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível gerar os confrontos.', {
+        variant: 'error',
+      });
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   const availableTeamsForDialog = addTeamDialog
     ? teams.filter((t) => !addTeamDialog.teams.some((gt) => gt.teamId === t.id))
     : [];
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const theme = useTheme();
+  const poolHoverBg = alpha(theme.palette.primary.main, 0.06);
+  const poolDivider = theme.palette.divider;
+
+  let poolContent: React.ReactNode = null;
+  if (!loading) {
+    poolContent =
+      ungroupedTeams.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ px: 0.5 }}>
+          Todas as equipes aprovadas já estão distribuídas nos grupos.
+        </Typography>
+      ) : (
+        <Box>
+          {ungroupedTeams.map((team, index) => (
+            <Box key={team.id}>
+              <Box
+                draggable
+                onDragStart={() => setDraggedTeamId(team.id)}
+                onDragEnd={() => setDraggedTeamId(null)}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  height: 44,
+                  px: 1.25,
+                  gap: 1,
+                  borderLeft: '3px solid',
+                  borderLeftColor: 'primary.main',
+                  bgcolor: 'background.paper',
+                  cursor: 'grab',
+                  userSelect: 'none',
+                  transition: 'background-color 0.15s',
+                  '&:hover': { bgcolor: poolHoverBg },
+                  '&:active': { cursor: 'grabbing' },
+                }}
+              >
+                <Avatar src={team.logo ?? undefined} variant="rounded" sx={{ width: 22, height: 22, flexShrink: 0 }} />
+                <Typography noWrap sx={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'text.primary' }}>
+                  {team.name}
+                </Typography>
+              </Box>
+              {index < ungroupedTeams.length - 1 && <Divider sx={{ borderColor: poolDivider }} />}
+            </Box>
+          ))}
+        </Box>
+      );
+  }
+
+  let groupsContent: React.ReactNode;
+  if (loading) {
+    groupsContent = <Loading />;
+  } else if (groups.length === 0) {
+    groupsContent = <EmptyState title="Nenhum grupo criado" description="Crie o primeiro grupo para organizar as equipes." />;
+  } else {
+    groupsContent = (
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+        {[...groups]
+          .sort((a, b) => a.displayOrder - b.displayOrder)
+          .map((group) => (
+            <Box key={group.id} sx={{ flex: '1 1 280px', minWidth: 0 }}>
+              <Stack spacing={1}>
+                <GroupCard
+                  group={group}
+                  teamsById={teamsById}
+                  onRename={() => openEdit(group)}
+                  onDelete={() => setDeleteTarget(group)}
+                  onRemoveTeam={(teamId) => handleRemoveTeam(group, teamId)}
+                  onMoveTeam={(teamId, direction) => handleMoveTeam(group, teamId, direction)}
+                  onTeamDragStart={(teamId) => setDraggedTeamId(teamId)}
+                  onDropTeam={() => handleDropTeam(group)}
+                />
+                <Button size="small" onClick={() => setAddTeamDialog(group)}>
+                  + Adicionar equipe
+                </Button>
+              </Stack>
+            </Box>
+          ))}
+      </Box>
+    );
+  }
+
+  let matchesContent: React.ReactNode = null;
+  if (!loading && matches.length > 0) {
+    const sortedGroupsForMatches = [...groups].sort((a, b) => a.displayOrder - b.displayOrder);
+    matchesContent = (
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
+          Confrontos
+        </Typography>
+        <Stack spacing={1.5}>
+          {sortedGroupsForMatches.map((group) => {
+            const groupMatches = matches
+              .filter((m) => m.groupId === group.id)
+              .sort((a, b) => (a.scheduledAt ?? '').localeCompare(b.scheduledAt ?? ''));
+            if (groupMatches.length === 0) return null;
+            return (
+              <Paper
+                key={group.id}
+                variant="outlined"
+                sx={{ overflow: 'hidden' }}
+              >
+                <Box
+                  sx={{
+                    px: 2.5,
+                    py: 1.5,
+                    bgcolor: alpha(theme.palette.primary.main, 0.04),
+                    borderBottom: `1px solid ${theme.palette.divider}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 800, fontSize: 15 }}>{group.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {groupMatches.length} confronto{groupMatches.length !== 1 ? 's' : ''}
+                  </Typography>
+                </Box>
+                <Box sx={{ bgcolor: 'background.default', p: 2 }}>
+                  <Stack spacing={1}>
+                    {groupMatches.map((match) => (
+                      <Box key={match.id} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <MatchCard
+                            match={match}
+                            homeTeamName={teamsById.get(match.homeTeamId)?.name ?? `Equipe #${match.homeTeamId}`}
+                            awayTeamName={teamsById.get(match.awayTeamId)?.name ?? `Equipe #${match.awayTeamId}`}
+                            onClick={() => navigate(`/admin/matches/${match.id}`)}
+                          />
+                        </Box>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          sx={{ mt: 1, flexShrink: 0 }}
+                          onClick={() => setDeleteMatchTarget(match.id)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
+              </Paper>
+            );
+          })}
+        </Stack>
+      </Box>
+    );
+  }
 
   return (
     <Box>
       <PageHeader
         title="Grupos"
-        subtitle="Organize as equipes em grupos manualmente"
+        subtitle="Arraste as equipes para montar os grupos e gere os confrontos ao concluir"
         actions={
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-            Novo grupo
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={openCreate}>
+              Novo grupo
+            </Button>
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<CheckIcon />}
+              onClick={generateGroupMatches}
+              disabled={generatingMatches || groups.length === 0}
+            >
+              {generatingMatches ? 'Verificando...' : 'Gerar confrontos'}
+            </Button>
+          </Stack>
         }
       />
 
-      {loading ? (
-        <Loading />
-      ) : groups.length === 0 ? (
-        <EmptyState title="Nenhum grupo criado" description="Crie o primeiro grupo para organizar as equipes." />
-      ) : (
-        <Grid container spacing={2}>
-          {groups
-            .sort((a, b) => a.displayOrder - b.displayOrder)
-            .map((group) => (
-              <Grid item xs={12} sm={6} md={4} key={group.id}>
-                <Stack spacing={1}>
-                  <GroupCard
-                    group={group}
-                    teamsById={teamsById}
-                    onRename={() => openEdit(group)}
-                    onDelete={() => setDeleteTarget(group)}
-                    onRemoveTeam={(teamId) => handleRemoveTeam(group, teamId)}
-                    onMoveTeam={(teamId, direction) => handleMoveTeam(group, teamId, direction)}
-                  />
-                  <Button size="small" onClick={() => setAddTeamDialog(group)}>
-                    + Adicionar equipe
-                  </Button>
-                </Stack>
-              </Grid>
-            ))}
-        </Grid>
-      )}
+      {/* Pool — same Paper+header visual as GroupBracket in BracketPage */}
+      <Paper
+        variant="outlined"
+        sx={{ overflow: 'hidden', mb: 3 }}
+      >
+        <Box
+          sx={{
+            px: 2.5,
+            py: 1.5,
+            bgcolor: alpha(theme.palette.primary.main, 0.04),
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Typography sx={{ fontWeight: 800, fontSize: 15, color: 'text.primary' }}>
+            Equipes disponíveis
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Arraste para um grupo
+          </Typography>
+        </Box>
+        <Box sx={{ bgcolor: 'background.default', p: ungroupedTeams.length === 0 || loading ? 2 : 0 }}>
+          {poolContent}
+        </Box>
+      </Paper>
+
+      {groupsContent}
+
+      {matchesContent}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>{editingGroup ? 'Renomear grupo' : 'Novo grupo'}</DialogTitle>
@@ -201,6 +540,104 @@ export function GroupsPage() {
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
           <Button variant="contained" onClick={handleSaveGroup} disabled={!groupName.trim()}>
             Salvar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Generate matches — collect date/time/court per pair before creating */}
+      <Dialog
+        open={generateDialogOpen}
+        onClose={() => !confirming && setGenerateDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        scroll="paper"
+      >
+        <DialogTitle>Configurar confrontos</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={3} sx={{ pt: 0.5 }}>
+            {Object.entries(
+              pendingPairs.reduce<Record<string, PendingPair[]>>((acc, p) => {
+                if (!acc[p.groupName]) acc[p.groupName] = [];
+                acc[p.groupName].push(p);
+                return acc;
+              }, {}),
+            ).map(([groupName, pairs]) => (
+              <Box key={groupName}>
+                <Typography
+                  sx={{
+                    mb: 1.5,
+                    color: 'text.secondary',
+                    fontWeight: 700,
+                    fontSize: 11,
+                    textTransform: 'uppercase',
+                    letterSpacing: 1,
+                  }}
+                >
+                  {groupName}
+                </Typography>
+                <Stack spacing={2}>
+                  {pairs.map((pair) => (
+                    <Box
+                      key={pair.key}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}
+                    >
+                      <Typography
+                        variant="body2"
+                        fontWeight={700}
+                        noWrap
+                        sx={{ flex: '1 1 180px', minWidth: 0 }}
+                      >
+                        {pair.homeName}{' '}
+                        <Typography component="span" variant="body2" color="text.secondary" fontWeight={400}>
+                          ×
+                        </Typography>{' '}
+                        {pair.awayName}
+                      </Typography>
+                      <TextField
+                        label="Data"
+                        type="date"
+                        size="small"
+                        value={pair.date}
+                        onChange={(e) => updatePendingPair(pair.key, 'date', e.target.value)}
+                        slotProps={{ inputLabel: { shrink: true } }}
+                        sx={{ flex: '0 0 155px' }}
+                      />
+                      <TextField
+                        label="Horário"
+                        type="time"
+                        size="small"
+                        value={pair.time}
+                        onChange={(e) => updatePendingPair(pair.key, 'time', e.target.value)}
+                        slotProps={{ inputLabel: { shrink: true }, htmlInput: { step: 300 } }}
+                        sx={{ flex: '0 0 130px' }}
+                      />
+                      <TextField
+                        label="Local"
+                        size="small"
+                        placeholder="Opcional"
+                        value={pair.court}
+                        onChange={(e) => updatePendingPair(pair.key, 'court', e.target.value)}
+                        sx={{ flex: '1 1 160px' }}
+                      />
+                    </Box>
+                  ))}
+                </Stack>
+              </Box>
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setGenerateDialogOpen(false)} disabled={confirming}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<CheckIcon />}
+            onClick={confirmGenerateMatches}
+            disabled={confirming}
+          >
+            {confirming ? 'Gerando...' : `Gerar ${pendingPairs.length} confronto(s)`}
           </Button>
         </DialogActions>
       </Dialog>
@@ -239,6 +676,16 @@ export function GroupsPage() {
         confirmLabel="Excluir"
         onConfirm={handleDeleteGroup}
         onClose={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={deleteMatchTarget !== null}
+        title="Excluir confronto"
+        description="Tem certeza que deseja excluir este confronto? Esta ação não pode ser desfeita."
+        danger
+        confirmLabel="Excluir"
+        onConfirm={handleDeleteMatch}
+        onClose={() => setDeleteMatchTarget(null)}
       />
     </Box>
   );

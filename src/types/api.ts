@@ -173,6 +173,8 @@ export interface BracketMatch {
   winnerTeamName: string | null;
   winnerTeamLogo?: string | null;
   status: MatchStatus;
+  scheduledAt?: string | null;
+  court?: string | null;
   nextMatchId: number | null;
   nextSlot: BracketSlot;
   displayOrder: number;

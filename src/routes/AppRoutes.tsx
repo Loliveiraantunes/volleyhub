@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { PublicLayout } from '../layouts/PublicLayout';
 import { AdminLayout } from '../layouts/AdminLayout';
@@ -13,7 +13,6 @@ import { EventCategoriesPage } from '../pages/admin/EventCategoriesPage';
 import { TeamsListPage } from '../pages/admin/TeamsListPage';
 import { TeamDetailPage } from '../pages/admin/TeamDetailPage';
 import { GroupsPage } from '../pages/admin/GroupsPage';
-import { MatchesListPage } from '../pages/admin/MatchesListPage';
 import { MatchFormPage } from '../pages/admin/MatchFormPage';
 import { MatchSummaryPage } from '../pages/admin/MatchSummaryPage';
 import { AdminStandingsPage } from '../pages/admin/AdminStandingsPage';
@@ -53,7 +52,6 @@ export function AppRoutes() {
         <Route path="events/:id/edit" element={<EventFormPage />} />
         <Route path="events/:eventId/teams" element={<TeamsListPage />} />
         <Route path="events/:eventId/groups" element={<GroupsPage />} />
-        <Route path="events/:eventId/matches" element={<MatchesListPage />} />
         <Route path="events/:eventId/matches/new" element={<MatchFormPage />} />
         <Route path="events/:eventId/standings" element={<AdminStandingsPage />} />
         <Route path="teams/:id" element={<TeamDetailPage />} />

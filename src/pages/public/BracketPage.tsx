@@ -7,6 +7,8 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import ImageIcon from '@mui/icons-material/Image';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PlaceIcon from '@mui/icons-material/Place';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 import { useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import html2canvas from 'html2canvas';
@@ -16,6 +18,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { publicEventService } from '../../services/eventService';
 import { standingsService } from '../../services/standingsService';
 import type { BracketGroup, BracketGroupTree, Event } from '../../types/api';
+import { formatDateTime } from '../../utils/format';
 
 type BracketData = BracketGroup[] | BracketGroupTree[];
 
@@ -26,6 +29,10 @@ type LegacyBracketMatch = {
   away: TeamSlot;
   homeSetsWon?: number;
   awaySetsWon?: number;
+  status?: string;
+  scheduledAt?: string | null;
+  court?: string | null;
+  winnerTeamId?: number | null;
 };
 type LegacyBracketRound = { title: string; matches: LegacyBracketMatch[] };
 
@@ -57,6 +64,8 @@ function legacyToTree(groups: BracketGroup[]): BracketGroupTree[] {
             winnerTeamName: null,
             winnerTeamLogo: null,
             status: 'SCHEDULED',
+            scheduledAt: null,
+            court: null,
             nextMatchId: null,
             nextSlot: null,
             displayOrder: index,
@@ -82,6 +91,10 @@ function treeToLegacyRounds(group: BracketGroupTree): LegacyBracketRound[] {
           : null,
       homeSetsWon: match.homeSetsWon,
       awaySetsWon: match.awaySetsWon,
+      status: match.status,
+      scheduledAt: match.scheduledAt,
+      court: match.court,
+      winnerTeamId: match.winnerTeamId,
     })),
   }));
 }
@@ -104,6 +117,8 @@ function buildRoundsFromGroup(group: BracketGroup): LegacyBracketRound[] {
       id: `g${group.groupId}-r0-${i}`,
       home: sorted[i] ?? null,
       away: sorted[i + 1] ?? null,
+      scheduledAt: null,
+      court: null,
     });
   }
   rounds.push({ title: ROUND_TITLES[0], matches: opening });
@@ -144,9 +159,9 @@ function resolveRowBg(isSelected: boolean, isTop: boolean): string {
   return 'transparent';
 }
 
-function resolveTeamBorderColor(team: TeamSlot, isTop: boolean): string {
-  if (!team) return '#3a4455';
-  return isTop ? '#4caf50' : '#ef5350';
+function resolveTeamBorderColor(team: TeamSlot, isFinished: boolean, isWinner: boolean): string {
+  if (!team || !isFinished) return '#3a4455';
+  return isWinner ? '#4caf50' : '#ef5350';
 }
 
 interface MatchRowProps {
@@ -154,6 +169,8 @@ interface MatchRowProps {
   groupId: number;
   isTop: boolean;
   isSelected: boolean;
+  isFinished: boolean;
+  isWinner: boolean;
   onTeamClick: (groupId: number, teamId: number) => void;
   textColor: string;
   mutedColor: string;
@@ -167,6 +184,8 @@ function MatchRow({
   groupId,
   isTop,
   isSelected,
+  isFinished,
+  isWinner,
   onTeamClick,
   textColor,
   mutedColor,
@@ -183,7 +202,7 @@ function MatchRow({
         display: 'flex',
         alignItems: 'center',
         gap: 1,
-        borderLeft: `3px solid ${resolveTeamBorderColor(team, isTop)}`,
+        borderLeft: `3px solid ${resolveTeamBorderColor(team, isFinished, isWinner)}`,
         bgcolor: isSelected ? selectedColor : resolveRowBg(false, isTop),
         cursor: team ? 'pointer' : 'default',
         transition: 'background-color 0.15s',
@@ -230,7 +249,8 @@ function BracketMatchCard({
   return (
     <Box
       sx={{
-        height: CARD_H,
+        height: 'auto',
+        minHeight: CARD_H,
         bgcolor: surface,
         border: `1px solid ${dividerColor}`,
         borderRadius: 0,
@@ -245,6 +265,8 @@ function BracketMatchCard({
         groupId={groupId}
         isTop
         isSelected={match.home?.teamId === selectedTeamId}
+        isFinished={match.status === 'FINISHED'}
+        isWinner={match.winnerTeamId != null && match.home?.teamId === match.winnerTeamId}
         onTeamClick={onTeamClick}
         textColor={textColor}
         mutedColor={mutedColor}
@@ -258,6 +280,8 @@ function BracketMatchCard({
         groupId={groupId}
         isTop={false}
         isSelected={match.away?.teamId === selectedTeamId}
+        isFinished={match.status === 'FINISHED'}
+        isWinner={match.winnerTeamId != null && match.away?.teamId === match.winnerTeamId}
         onTeamClick={onTeamClick}
         textColor={textColor}
         mutedColor={mutedColor}
@@ -265,6 +289,26 @@ function BracketMatchCard({
         selectedColor={selectedRowColor}
         setsWon={match.awaySetsWon}
       />
+      {match.status !== 'FINISHED' && (match.court || match.scheduledAt) && (
+        <Box sx={{ px: 1.25, py: 0.75, borderTop: `1px solid ${dividerColor}`, bgcolor: alpha('#000000', 0.02) }}>
+          <Stack spacing={0.4}>
+            {match.court && (
+              <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
+                <PlaceIcon fontSize="small" />
+                <Typography variant="caption" sx={{ fontSize: 11, color: mutedColor }}>{match.court}</Typography>
+              </Stack>
+            )}
+            {match.scheduledAt && (
+              <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
+                <ScheduleIcon fontSize="small" />
+                <Typography variant="caption" sx={{ fontSize: 11, color: mutedColor }}>
+                  {formatDateTime(match.scheduledAt)}
+                </Typography>
+              </Stack>
+            )}
+          </Stack>
+        </Box>
+      )}
     </Box>
   );
 }
