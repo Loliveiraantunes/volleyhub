@@ -10,6 +10,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import GroupsIcon from '@mui/icons-material/Groups';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Loading } from '../../components/Loading';
@@ -19,78 +20,69 @@ import { publicMatchService } from '../../services/matchService';
 import type { Event, MatchDetailResponse, TeamDetailResponse } from '../../types/api';
 import { formatDateTime, staffRoleLabels } from '../../utils/format';
 
-function TeamHeader({ team, setsWon, winnerTeamId }: Readonly<{ team: TeamDetailResponse; setsWon: number; winnerTeamId?: number | null }>) {
-  const isWinner = winnerTeamId === team.teamId;
-
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 3,
-        height: '100%',
-        borderColor: isWinner ? 'success.light' : 'divider',
-        bgcolor: isWinner ? 'rgba(46, 125, 50, 0.04)' : 'background.paper',
-      }}
-    >
-      <Stack alignItems="center" spacing={2}>
-        <Avatar src={team.teamLogo ?? undefined} variant="rounded" sx={{ width: 78, height: 78 }}>
-          <GroupsIcon fontSize="large" />
-        </Avatar>
-        <Box textAlign="center">
-          <Typography variant="h5" fontWeight={800}>
-            {team.teamName}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {setsWon} sets vencidos
-          </Typography>
-        </Box>
-        {isWinner && <Chip label="Vencedor" color="success" size="small" />}
-      </Stack>
-    </Paper>
-  );
-}
-
-function PeopleList({
-  title,
-  emptyText,
-  people,
-}: Readonly<{
-  title: string;
-  emptyText: string;
-  people: Array<{ id: number; fullName: string; detail?: string | null }>;
-}>) {
+function TeamRoster({ team }: Readonly<{ team: TeamDetailResponse }>) {
   return (
     <Paper variant="outlined" sx={{ p: 3 }}>
-      <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
-        {title}
-      </Typography>
-      {people.length > 0 ? (
-        <Stack spacing={1}>
-          {people.map((person) => (
-            <Box
-              key={person.id}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 2,
-                px: 1.5,
-                py: 1,
-                borderRadius: 1,
-                bgcolor: 'grey.50',
-              }}
-            >
-              <Typography fontWeight={700}>{person.fullName}</Typography>
-              {person.detail && (
-                <Typography variant="body2" color="text.secondary" textAlign="right">
-                  {person.detail}
-                </Typography>
-              )}
-            </Box>
-          ))}
-        </Stack>
+      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2.5 }}>
+        <Avatar src={team.teamLogo ?? undefined} variant="rounded" sx={{ width: 36, height: 36 }}>
+          <GroupsIcon fontSize="small" />
+        </Avatar>
+        <Typography variant="subtitle1" fontWeight={800}>{team.teamName}</Typography>
+      </Stack>
+
+      {team.players.length > 0 ? (
+        <>
+          <Typography
+            variant="caption"
+            fontWeight={700}
+            color="text.secondary"
+            sx={{ textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1 }}
+          >
+            Jogadores ({team.players.length})
+          </Typography>
+          <Stack spacing={0.25}>
+            {team.players.map((player) => (
+              <Box key={player.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, py: 0.75, borderRadius: 1 }}>
+                <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: 'primary.main', flexShrink: 0 }}>
+                  {player.fullName[0]}
+                </Avatar>
+                <Typography variant="body2" fontWeight={600}>{player.fullName}</Typography>
+              </Box>
+            ))}
+          </Stack>
+        </>
       ) : (
-        <Alert severity="info">{emptyText}</Alert>
+        <Alert severity="info">Jogadores não disponíveis para esta equipe.</Alert>
+      )}
+
+      {team.technicalStaff.length > 0 && (
+        <>
+          <Divider sx={{ my: 2 }} />
+          <Typography
+            variant="caption"
+            fontWeight={700}
+            color="text.secondary"
+            sx={{ textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1 }}
+          >
+            Comissão técnica
+          </Typography>
+          <Stack spacing={0.25}>
+            {team.technicalStaff.map((member) => (
+              <Box
+                key={member.id}
+                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 1, py: 0.75, borderRadius: 1 }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: 'secondary.main', flexShrink: 0 }}>
+                    {member.fullName[0]}
+                  </Avatar>
+                  <Typography variant="body2" fontWeight={600}>{member.fullName}</Typography>
+                </Stack>
+                <Chip label={staffRoleLabels[member.role]} size="small" variant="outlined" />
+              </Box>
+            ))}
+          </Stack>
+        </>
       )}
     </Paper>
   );
@@ -150,52 +142,114 @@ export function MatchPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper variant="outlined" sx={{ p: { xs: 2.5, md: 4 }, mb: 3 }}>
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', md: 'center' }}
-          spacing={2}
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Box sx={{ mb: 3 }}>
+        <Chip
+          icon={<ArrowBackIcon />}
+          label="Voltar para a chave"
+          color="primary"
+          variant="outlined"
+          onClick={() => navigate(`/event/${slug}/chave`)}
+          clickable
+          sx={{ mb: 2 }}
+        />
+      </Box>
+      <Paper variant="outlined" sx={{ overflow: 'hidden', mb: 3 }}>
+        <Box
+          sx={{
+            px: 3,
+            py: 1.25,
+            bgcolor: 'rgba(21,101,192,0.04)',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
         >
-          <Box>
-            <Chip label={event.name} size="small" color="primary" variant="outlined" sx={{ mb: 1.5 }} />
-            <Typography variant="h4" fontWeight={800}>
-              Detalhes da partida
-            </Typography>
-          </Box>
+          <Chip label={event.name} size="small" color="primary" variant="outlined" />
           <Stack direction="row" spacing={1} flexWrap="wrap">
-            <Chip label={match.status} color={match.status === 'FINISHED' ? 'success' : 'primary'} />
-            {match.court && <Chip label={match.court} variant="outlined" />}
-            {match.scheduledAt && <Chip label={formatDateTime(match.scheduledAt)} variant="outlined" />}
+            <Chip label={match.status} color={match.status === 'FINISHED' ? 'success' : 'primary'} size="small" />
+            {match.court && <Chip label={match.court} variant="outlined" size="small" />}
+            {match.scheduledAt && <Chip label={formatDateTime(match.scheduledAt)} variant="outlined" size="small" />}
           </Stack>
-        </Stack>
+        </Box>
 
-        <Divider sx={{ my: 3 }} />
+        <Box sx={{ bgcolor: '#1a2a4a', px: { xs: 2.5, md: 5 }, py: { xs: 4, md: 5 } }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 200px 1fr' }, gap: 3 }}>
+            <Stack alignItems="center" spacing={1.5}>
+              <Avatar
+                src={match.homeTeam.teamLogo ?? undefined}
+                variant="circular"
+                sx={{ width: { xs: 80, md: 104 }, height: { xs: 80, md: 104 }, bgcolor: 'white', border: '3px solid rgba(255,255,255,0.25)' }}
+              >
+                <GroupsIcon fontSize="large" />
+              </Avatar>
+              <Box textAlign="center">
+                <Typography fontWeight={800} sx={{ color: 'white', fontSize: { xs: '1rem', md: '1.15rem' } }}>
+                  {match.homeTeam.teamName}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                  {match.homeSetsWon} sets vencidos
+                </Typography>
+              </Box>
+              {match.winnerTeamId === match.homeTeam.teamId && (
+                <Chip label="Vencedor" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 700 }} />
+              )}
+            </Stack>
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 220px 1fr' }, gap: 3 }}>
-          <TeamHeader team={match.homeTeam} setsWon={match.homeSetsWon} winnerTeamId={match.winnerTeamId} />
-
-          <Paper variant="outlined" sx={{ p: 5, height: '100%', flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="h2" fontWeight={900} color="primary.main">
-                {match.homeSetsWon}
+            <Stack alignItems="center" justifyContent="center" spacing={0.5}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <Typography
+                  fontWeight={900}
+                  sx={{ color: 'white', fontSize: { xs: '4rem', md: '5.5rem' }, lineHeight: 1 }}
+                >
+                  {match.homeSetsWon}
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '2rem', fontWeight: 300 }}>×</Typography>
+                <Typography
+                  fontWeight={900}
+                  sx={{ color: 'white', fontSize: { xs: '4rem', md: '5.5rem' }, lineHeight: 1 }}
+                >
+                  {match.awaySetsWon}
+                </Typography>
+              </Stack>
+              <Typography
+                variant="caption"
+                sx={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}
+              >
+                sets
               </Typography>
-              <Typography variant="h5" color="text.secondary">
-                ×
-              </Typography>
-              <Typography variant="h2" fontWeight={900} color="primary.main">
-                {match.awaySetsWon}
-              </Typography>
-          </Paper>
+            </Stack>
 
-          <TeamHeader team={match.awayTeam} setsWon={match.awaySetsWon} winnerTeamId={match.winnerTeamId} />
+            <Stack alignItems="center" spacing={1.5}>
+              <Avatar
+                src={match.awayTeam.teamLogo ?? undefined}
+                variant="circular"
+                sx={{ width: { xs: 80, md: 104 }, height: { xs: 80, md: 104 }, bgcolor: 'white', border: '3px solid rgba(255,255,255,0.25)' }}
+              >
+                <GroupsIcon fontSize="large" />
+              </Avatar>
+              <Box textAlign="center">
+                <Typography fontWeight={800} sx={{ color: 'white', fontSize: { xs: '1rem', md: '1.15rem' } }}>
+                  {match.awayTeam.teamName}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                  {match.awaySetsWon} sets vencidos
+                </Typography>
+              </Box>
+              {match.winnerTeamId === match.awayTeam.teamId && (
+                <Chip label="Vencedor" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 700 }} />
+              )}
+            </Stack>
+          </Box>
         </Box>
       </Paper>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 3 }}>
         <Paper variant="outlined" sx={{ p: 3 }}>
-          <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
-            Pontuação por set
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
+            Resultado por set
           </Typography>
             
           {sortedSets.length > 0 ? (
@@ -267,74 +321,11 @@ export function MatchPage() {
             <Alert severity="info">Ainda não há registros de sets para esta partida.</Alert>
           )}
         </Paper>
-
-        <Paper variant="outlined" sx={{ p: 3 }}>
-          <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
-            Informações gerais
-          </Typography>
-          <Stack spacing={1.5}>
-            <Box display="flex" justifyContent="space-between" gap={2}>
-              <Typography color="text.secondary">Status</Typography>
-              <Typography fontWeight={700}>{match.status}</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between" gap={2}>
-              <Typography color="text.secondary">Local</Typography>
-              <Typography fontWeight={700}>{match.court ?? 'Não informado'}</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between" gap={2}>
-              <Typography color="text.secondary">Data/Hora</Typography>
-              <Typography fontWeight={700}>{match.scheduledAt ? formatDateTime(match.scheduledAt) : 'Não informado'}</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between" gap={2}>
-              <Typography color="text.secondary">Total de sets</Typography>
-              <Typography fontWeight={700}>{match.sets.length}</Typography>
-            </Box>
-          </Stack>
-        </Paper>
       </Box>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mt: 3 }}>
-        <PeopleList
-          title={`Jogadores - ${match.homeTeam.teamName}`}
-          emptyText="Jogadores não disponíveis para esta equipe."
-          people={match.homeTeam.players.map((player) => ({
-            id: player.id,
-            fullName: player.fullName
-          }))}
-        />
-
-        <PeopleList
-          title={`Jogadores - ${match.awayTeam.teamName}`}
-          emptyText="Jogadores não disponíveis para esta equipe."
-          people={match.awayTeam.players.map((player) => ({
-            id: player.id,
-            fullName: player.fullName
-          }))}
-        />
-
-        <PeopleList
-          title={`Técnico / comissão - ${match.homeTeam.teamName}`}
-          emptyText="Comissão técnica não disponível para esta equipe."
-          people={match.homeTeam.technicalStaff.map((member) => ({
-            id: member.id,
-            fullName: member.fullName,
-            detail:  staffRoleLabels[member.role],
-          }))}
-        />
-
-        <PeopleList
-          title={`Técnico / comissão - ${match.awayTeam.teamName}`}
-          emptyText="Comissão técnica não disponível para esta equipe."
-          people={match.awayTeam.technicalStaff.map((member) => ({
-            id: member.id,
-            fullName: member.fullName,
-            detail: staffRoleLabels[member.role],
-          }))}
-        />
-      </Box>
-
-      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-        <Chip label="Voltar" color="primary" variant="outlined" onClick={() => navigate(`/event/${slug}/chave`)} clickable />
+        <TeamRoster team={match.homeTeam} />
+        <TeamRoster team={match.awayTeam} />
       </Box>
     </Container>
   );
