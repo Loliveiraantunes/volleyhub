@@ -3,6 +3,8 @@ import type { Match, MatchDetailResponse, MatchRequest } from '../types/api';
 
 export const matchService = {
   listByEvent: (eventId: number) => api.get<Match[]>(`/api/admin/events/${eventId}/matches`).then((r) => r.data),
+  generateBracket: (eventId: number, groupId: number) =>
+    api.post<Match[]>(`/api/admin/events/${eventId}/groups/${groupId}/matches/generate-bracket`).then((r) => r.data),
   create: (eventId: number, data: MatchRequest) =>
     api.post<Match>(`/api/admin/events/${eventId}/matches`, data).then((r) => r.data),
   findById: (id: number) => api.get<Match>(`/api/admin/matches/${id}`).then((r) => r.data),

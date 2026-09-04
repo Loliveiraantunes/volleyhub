@@ -12,8 +12,6 @@ import {
   useTheme,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useRef, useState } from 'react';
 import type { GroupStage, GroupStageTeam, Team } from '../types/api';
@@ -24,7 +22,6 @@ interface GroupCardProps {
   onRename: () => void;
   onDelete: () => void;
   onRemoveTeam: (teamId: number) => void;
-  onMoveTeam: (teamId: number, direction: 'up' | 'down') => void;
   onTeamDragStart: (teamId: number) => void;
   onDropTeam: () => void;
 }
@@ -32,13 +29,10 @@ interface GroupCardProps {
 interface SlotRowProps {
   gt: GroupStageTeam | null;
   team: Team | undefined;
-  seedIndex: number;
-  totalTeams: number;
   isTop: boolean;
   textColor: string;
   mutedColor: string;
   hoverBg: string;
-  onMoveTeam: (teamId: number, direction: 'up' | 'down') => void;
   onRemoveTeam: (teamId: number) => void;
   onTeamDragStart: (teamId: number) => void;
 }
@@ -47,13 +41,10 @@ interface SlotRowProps {
 function SlotRow({
   gt,
   team,
-  seedIndex,
-  totalTeams,
   isTop,
   textColor,
   mutedColor,
   hoverBg,
-  onMoveTeam,
   onRemoveTeam,
   onTeamDragStart,
 }: Readonly<SlotRowProps>) {
@@ -104,12 +95,6 @@ function SlotRow({
         </Typography>
       </Box>
       <Stack direction="row" sx={{ flexShrink: 0 }}>
-        <IconButton size="small" disabled={seedIndex === 0} onClick={() => onMoveTeam(gt.teamId, 'up')}>
-          <ArrowUpwardIcon sx={{ fontSize: 14 }} />
-        </IconButton>
-        <IconButton size="small" disabled={seedIndex >= totalTeams - 1} onClick={() => onMoveTeam(gt.teamId, 'down')}>
-          <ArrowDownwardIcon sx={{ fontSize: 14 }} />
-        </IconButton>
         <IconButton size="small" color="error" onClick={() => onRemoveTeam(gt.teamId)}>
           <DeleteIcon sx={{ fontSize: 14 }} />
         </IconButton>
@@ -124,7 +109,6 @@ export function GroupCard({
   onRename,
   onDelete,
   onRemoveTeam,
-  onMoveTeam,
   onTeamDragStart,
   onDropTeam,
 }: Readonly<GroupCardProps>) {
@@ -208,8 +192,6 @@ export function GroupCard({
             {pairs.map(([home, away], pairIndex) => {
               const homeTeam = teamsById.get(home.teamId);
               const awayTeam = away ? teamsById.get(away.teamId) : undefined;
-              const homeIdx = pairIndex * 2;
-              const awayIdx = homeIdx + 1;
               return (
                 <Box
                   key={home.teamId}
@@ -221,15 +203,15 @@ export function GroupCard({
                   }}
                 >
                   <SlotRow
-                    gt={home} team={homeTeam} seedIndex={homeIdx} totalTeams={sortedTeams.length}
+                    gt={home} team={homeTeam}
                     isTop textColor={textColor} mutedColor={mutedColor} hoverBg={hoverBg}
-                    onMoveTeam={onMoveTeam} onRemoveTeam={onRemoveTeam} onTeamDragStart={onTeamDragStart}
+                    onRemoveTeam={onRemoveTeam} onTeamDragStart={onTeamDragStart}
                   />
                   <Divider sx={{ borderColor: dividerColor }} />
                   <SlotRow
-                    gt={away ?? null} team={awayTeam} seedIndex={awayIdx} totalTeams={sortedTeams.length}
+                    gt={away ?? null} team={awayTeam}
                     isTop={false} textColor={textColor} mutedColor={mutedColor} hoverBg={hoverBg}
-                    onMoveTeam={onMoveTeam} onRemoveTeam={onRemoveTeam} onTeamDragStart={onTeamDragStart}
+                    onRemoveTeam={onRemoveTeam} onTeamDragStart={onTeamDragStart}
                   />
                 </Box>
               );

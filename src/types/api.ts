@@ -7,7 +7,9 @@ export type RegistrationStatus =
   | 'APPROVED'
   | 'REJECTED';
 
-export type MatchStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+export type MatchStatus = 'AWAITING' | 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+
+export type MatchStage = 'GROUP_STAGE' | 'QUARTERFINALS' | 'SEMIFINALS' | 'FINAL';
 
 export type StaffRole = 'COACH' | 'ASSISTANT';
 
@@ -149,6 +151,7 @@ export interface Match {
   id: number;
   eventId: number;
   groupId?: number | null;
+  stage?: MatchStage;
   homeTeamId: number;
   awayTeamId: number;
   scheduledAt?: string | null;
@@ -162,8 +165,8 @@ export interface Match {
 
 export interface MatchRequest {
   groupId?: number | null;
-  homeTeamId: number;
-  awayTeamId: number;
+  homeTeamId: number | null;
+  awayTeamId: number | null;
   scheduledAt?: string | null;
   court?: string | null;
   status: MatchStatus;
@@ -201,7 +204,7 @@ export type BracketSlot = 'HOME' | 'AWAY' | null;
 
 export interface BracketMatch {
   matchId: number;
-  sourceMatchId: number;
+  sourceMatchId?: number | null;
   homeTeamId: number | null;
   awayTeamId: number | null;
   homeTeamName: string | null;

@@ -36,7 +36,7 @@ type BracketData = BracketGroup[] | BracketGroupTree[];
 type TeamSlot = BracketGroup['teams'][number] | null;
 type LegacyBracketMatch = {
   id: string;
-  sourceMatchId: number;
+  sourceMatchId?: number | null;
   home: TeamSlot;
   away: TeamSlot;
   homeSetsWon?: number;
@@ -167,8 +167,8 @@ function matchTopY(roundIndex: number, matchIndex: number): number {
   return matchCenterY(roundIndex, matchIndex) - CARD_H / 2;
 }
 
-function resolveRowBg(isSelected: boolean, isTop: boolean): string {
-  if (isSelected) return 'rgba(21,101,192,0.08)';
+function resolveRowBg(isWinner: boolean, isTop: boolean): string {
+  if (isWinner) return 'rgba(46, 125, 50, 0.07)';
   if (!isTop) return 'rgba(0,0,0,0.03)';
   return 'transparent';
 }
@@ -199,6 +199,8 @@ function MatchRow({
   hoverColor,
   setsWon,
 }: Readonly<MatchRowProps>) {
+  let nameColor = team ? textColor : mutedColor;
+  if (isWinner) nameColor = '#2e7d32';
   return (
     <Box
       sx={{
@@ -211,17 +213,17 @@ function MatchRow({
         alignItems: 'center',
         gap: 1,
         borderLeft: `3px solid ${resolveTeamBorderColor(team, isFinished, isWinner)}`,
-        bgcolor: resolveRowBg(false, isTop),
+        bgcolor: resolveRowBg(isWinner, isTop),
         cursor: 'default',
         transition: 'background-color 0.15s',
         '&:hover': { bgcolor: hoverColor },
       }}
     >
       <Avatar src={team?.logo ?? undefined} variant="rounded" sx={{ width: 24, height: 24, flexShrink: 0 }} />
-      <Typography noWrap sx={{ flex: 1, color: team ? textColor : mutedColor, fontSize: 13, fontWeight: 700 }}>
+      <Typography noWrap sx={{ flex: 1, color: nameColor, fontSize: 13, fontWeight: isWinner ? 800 : 700 }}>
         {team?.teamName ?? 'TBD'}
       </Typography>
-      <Typography sx={{ color: mutedColor, fontSize: 12, fontWeight: 700, minWidth: 18, textAlign: 'right' }}>
+      <Typography sx={{ color: isWinner ? '#2e7d32' : mutedColor, fontSize: 12, fontWeight: isWinner ? 800 : 700, minWidth: 18, textAlign: 'right' }}>
         {setsWon ?? 0}
       </Typography>
     </Box>
@@ -486,21 +488,18 @@ function GroupBracket({ group, onMatchClick }: Readonly<GroupBracketProps>) {
         sx={{
           px: 2.5,
           py: 1.5,
-          background: 'linear-gradient(135deg, rgba(21,101,192,0.08), rgba(21,101,192,0.02))',
+          bgcolor: 'primary.main',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           cursor: 'pointer',
           userSelect: 'none',
-          borderBottom: collapsed ? 'none' : `1px solid ${dividerColor}`,
         }}
       >
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Typography sx={{ color: textColor, fontWeight: 800, fontSize: 15 }}>
-            {group.groupName}
-          </Typography>
-        </Stack>
-        <IconButton size="small" sx={{ color: mutedColor, p: 0.5 }} disableRipple>
+        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: 15 }}>
+          {group.groupName}
+        </Typography>
+        <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)', p: 0.5 }} disableRipple>
           {collapsed ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
         </IconButton>
       </Box>
@@ -513,20 +512,22 @@ function GroupBracket({ group, onMatchClick }: Readonly<GroupBracketProps>) {
             </Typography>
           ) : (
             <>
-              <Stack direction="row" sx={{ mb: 1.5 }}>
+              <Stack direction="row" sx={{ mb: 2 }}>
                 {rounds.map((round, ri) => (
                   <Box key={round.title} sx={{ width: COL_W, mr: `${ri < rounds.length - 1 ? COL_GAP : 0}px` }}>
-                    <Typography
-                      sx={{
-                        color: mutedColor,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        letterSpacing: 1,
-                      }}
-                    >
-                      {round.title}
-                    </Typography>
+                    <Box sx={{ bgcolor: 'rgba(21,101,192,0.08)', borderRadius: 0.75, px: 1.25, py: 0.5, textAlign: 'center' }}>
+                      <Typography
+                        sx={{
+                          color: 'primary.main',
+                          fontSize: 10,
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          letterSpacing: 1,
+                        }}
+                      >
+                        {round.title}
+                      </Typography>
+                    </Box>
                   </Box>
                 ))}
               </Stack>
@@ -625,31 +626,40 @@ export function BracketPage() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ sm: 'center' }}
-        spacing={2}
-        sx={{ mb: 3 }}
+      <Paper
+        variant="outlined"
+        sx={{ p: { xs: 2, md: 2.5 }, mb: 3, bgcolor: 'rgba(21,101,192,0.04)', borderColor: 'rgba(21,101,192,0.12)' }}
       >
-        <Typography variant="h5" fontWeight={900} color="text.primary">
-          Chave — {event.name}
-        </Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap">
-          <Button size="small" startIcon={<ShareIcon />} onClick={handleShare}>
-            Compartilhar
-          </Button>
-          <Button size="small" startIcon={<LinkIcon />} onClick={handleCopyLink}>
-            Copiar link
-          </Button>
-          <Button size="small" startIcon={<PictureAsPdfIcon />} onClick={handleDownloadPdf}>
-            Baixar PDF
-          </Button>
-          <Button size="small" startIcon={<ImageIcon />} onClick={handleDownloadImage}>
-            Baixar imagem
-          </Button>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ sm: 'center' }}
+          spacing={2}
+        >
+          <Box>
+            <Typography variant="caption" color="primary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 0.5 }}>
+              {event.name}
+            </Typography>
+            <Typography variant="h5" fontWeight={900} color="text.primary">
+              Chave do campeonato
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Button size="small" variant="outlined" startIcon={<ShareIcon />} onClick={handleShare}>
+              Compartilhar
+            </Button>
+            <Button size="small" variant="outlined" startIcon={<LinkIcon />} onClick={handleCopyLink}>
+              Copiar link
+            </Button>
+            <Button size="small" variant="outlined" startIcon={<PictureAsPdfIcon />} onClick={handleDownloadPdf}>
+              Baixar PDF
+            </Button>
+            <Button size="small" variant="outlined" startIcon={<ImageIcon />} onClick={handleDownloadImage}>
+              Baixar imagem
+            </Button>
+          </Stack>
         </Stack>
-      </Stack>
+      </Paper>
 
       {bracket.length === 0 ? (
         <EmptyState

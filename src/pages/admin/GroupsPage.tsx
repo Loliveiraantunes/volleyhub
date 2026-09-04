@@ -13,6 +13,8 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
   useTheme,
@@ -37,18 +39,12 @@ import { teamService } from '../../services/teamService';
 import type { GroupStage, Match, Team } from '../../types/api';
 import { formatDateTime } from '../../utils/format';
 
-interface PendingPair {
-  key: string;
-  groupId: number;
-  groupName: string;
-  homeTeamId: number;
-  homeName: string;
-  awayTeamId: number;
-  awayName: string;
-  date: string;
-  time: string;
-  court: string;
-}
+const STAGE_LABELS = {
+  GROUP_STAGE: 'Group Stage',
+  QUARTERFINALS: 'Quarterfinals',
+  SEMIFINALS: 'Semifinals',
+  FINAL: 'Final',
+} as const;
 
 export function GroupsPage() {
   const { eventId } = useParams();
@@ -65,15 +61,12 @@ export function GroupsPage() {
   const [draggedTeamId, setDraggedTeamId] = useState<number | null>(null);
   const [generatingMatches, setGeneratingMatches] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
-  const [pendingPairs, setPendingPairs] = useState<PendingPair[]>([]);
-  const [confirming, setConfirming] = useState(false);
   const [deleteMatchTarget, setDeleteMatchTarget] = useState<number | null>(null);
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [editMatchData, setEditMatchData] = useState({
     groupId: '' as number | '',
-    homeTeamId: '' as number | '',
-    awayTeamId: '' as number | '',
+    homeTeamId: null as number | null,
+    awayTeamId: null as number | null,
     scheduledAt: '',
     court: '',
   });
@@ -82,6 +75,7 @@ export function GroupsPage() {
   const [summarySets, setSummarySets] = useState<Array<{ setNumber: number; homePoints: number; awayPoints: number }>>([]);
   const [savingSummary, setSavingSummary] = useState(false);
   const [confirmFinalizeOpen, setConfirmFinalizeOpen] = useState(false);
+  const [matchTab, setMatchTab] = useState<'OPEN' | 'FINISHED'>('OPEN');
 
   const load = () => {
     if (!eventId) return;
@@ -187,24 +181,6 @@ export function GroupsPage() {
     }
   };
 
-  const handleMoveTeam = async (group: GroupStage, teamId: number, direction: 'up' | 'down') => {
-    const sorted = [...group.teams].sort((a, b) => a.displayOrder - b.displayOrder);
-    const index = sorted.findIndex((t) => t.teamId === teamId);
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= sorted.length) return;
-    try {
-      await Promise.all([
-        groupService.addTeam(group.id, sorted[index].teamId, sorted[targetIndex].displayOrder),
-        groupService.addTeam(group.id, sorted[targetIndex].teamId, sorted[index].displayOrder),
-      ]);
-      load();
-    } catch (err) {
-      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível reordenar as equipes.', {
-        variant: 'error',
-      });
-    }
-  };
-
   const handleDropTeam = async (targetGroup: GroupStage) => {
     if (draggedTeamId === null) return;
     const sourceGroup = groupByTeamId.get(draggedTeamId);
@@ -226,54 +202,16 @@ export function GroupsPage() {
   };
 
   const generateGroupMatches = async () => {
-    if (!eventId) return;
+    if (!eventId || groups.length === 0) return;
     setGeneratingMatches(true);
     try {
-      const existing = await matchService.listByEvent(Number(eventId));
-      // groups that already have any match are skipped to avoid conflicting with bracket matches
-      const groupsWithMatches = new Set(existing.filter((m) => m.groupId != null).map((m) => m.groupId));
-      const existingKeys = new Set(
-        existing
-          .filter((m) => m.groupId != null)
-          .map((m) => `${m.groupId}:${Math.min(m.homeTeamId, m.awayTeamId)}:${Math.max(m.homeTeamId, m.awayTeamId)}`),
+      const generatedMatchesByGroup = await Promise.all(
+        groups.map((group) => matchService.generateBracket(Number(eventId), group.id)),
       );
-      const today = dayjs().format('YYYY-MM-DD');
-      const pairs: PendingPair[] = [];
-      for (const group of groups) {
-        if (groupsWithMatches.has(group.id)) continue;
-        const sorted = [...group.teams].sort((a, b) => a.displayOrder - b.displayOrder);
-        for (let i = 0; i + 1 < sorted.length; i += 2) {
-          const home = sorted[i].teamId;
-          const away = sorted[i + 1].teamId;
-          const key = `${group.id}:${Math.min(home, away)}:${Math.max(home, away)}`;
-          if (existingKeys.has(key)) continue;
-          pairs.push({
-            key,
-            groupId: group.id,
-            groupName: group.name,
-            homeTeamId: home,
-            homeName: teamsById.get(home)?.name ?? `Equipe #${home}`,
-            awayTeamId: away,
-            awayName: teamsById.get(away)?.name ?? `Equipe #${away}`,
-            date: today,
-            time: '',
-            court: '',
-          });
-        }
-      }
-      if (pairs.length === 0) {
-        enqueueSnackbar(
-          groupsWithMatches.size > 0
-            ? 'Os grupos já possuem confrontos. Exclua os incorretos e gere novamente se necessário.'
-            : 'Nenhum confronto novo necessário.',
-          { variant: 'info' },
-        );
-        return;
-      }
-      setPendingPairs(pairs);
-      setGenerateDialogOpen(true);
+      setMatches(generatedMatchesByGroup.flat());
+      enqueueSnackbar('Confrontos gerados com sucesso.', { variant: 'success' });
     } catch (err) {
-      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível verificar os confrontos.', {
+      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível gerar os confrontos.', {
         variant: 'error',
       });
     } finally {
@@ -300,20 +238,24 @@ export function GroupsPage() {
     setEditingMatch(match);
     setEditMatchData({
       groupId: match.groupId ?? '',
-      homeTeamId: match.homeTeamId,
-      awayTeamId: match.awayTeamId,
+      homeTeamId: match.homeTeamId ?? null,
+      awayTeamId: match.awayTeamId ?? null,
       scheduledAt: match.scheduledAt ? dayjs(match.scheduledAt).format('YYYY-MM-DDTHH:mm') : '',
       court: match.court ?? '',
     });
   };
 
-  const updateEditMatchData = (field: keyof typeof editMatchData, value: string | number) => {
+  const updateEditMatchData = (field: keyof typeof editMatchData, value: string | number | null) => {
     setEditMatchData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSaveMatch = async () => {
-    if (!editingMatch || editMatchData.homeTeamId === '' || editMatchData.awayTeamId === '') return;
-    if (editMatchData.homeTeamId === editMatchData.awayTeamId) {
+    if (!editingMatch) return;
+    if (
+      editMatchData.homeTeamId !== null &&
+      editMatchData.awayTeamId !== null &&
+      editMatchData.homeTeamId === editMatchData.awayTeamId
+    ) {
       enqueueSnackbar('As equipes do confronto devem ser diferentes.', { variant: 'warning' });
       return;
     }
@@ -409,41 +351,6 @@ export function GroupsPage() {
     }
   };
 
-  const updatePendingPair = (key: string, field: 'date' | 'time' | 'court', value: string) => {
-    setPendingPairs((prev) => prev.map((p) => (p.key === key ? { ...p, [field]: value } : p)));
-  };
-
-  const confirmGenerateMatches = async () => {
-    if (!eventId) return;
-    setConfirming(true);
-    try {
-      for (const pair of pendingPairs) {
-        const scheduledAt = pair.time
-          ? dayjs(`${pair.date}T${pair.time}`).toISOString()
-          : `${pair.date}T00:00:00.000Z`;
-        await matchService.create(Number(eventId), {
-          groupId: pair.groupId,
-          homeTeamId: pair.homeTeamId,
-          awayTeamId: pair.awayTeamId,
-          scheduledAt,
-          court: pair.court || null,
-          status: 'SCHEDULED',
-          sets: [],
-        });
-      }
-      enqueueSnackbar(`${pendingPairs.length} confronto(s) gerado(s).`, { variant: 'success' });
-      setGenerateDialogOpen(false);
-      const updated = await matchService.listByEvent(Number(eventId));
-      setMatches(updated);
-    } catch (err) {
-      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível gerar os confrontos.', {
-        variant: 'error',
-      });
-    } finally {
-      setConfirming(false);
-    }
-  };
-
   const availableTeamsForDialog = addTeamDialog
     ? teams.filter((t) => !addTeamDialog.teams.some((gt) => gt.teamId === t.id))
     : [];
@@ -515,7 +422,6 @@ export function GroupsPage() {
                   onRename={() => openEdit(group)}
                   onDelete={() => setDeleteTarget(group)}
                   onRemoveTeam={(teamId) => handleRemoveTeam(group, teamId)}
-                  onMoveTeam={(teamId, direction) => handleMoveTeam(group, teamId, direction)}
                   onTeamDragStart={(teamId) => setDraggedTeamId(teamId)}
                   onDropTeam={() => handleDropTeam(group)}
                 />
@@ -531,19 +437,39 @@ export function GroupsPage() {
 
   let matchesContent: React.ReactNode = null;
   if (!loading && matches.length > 0) {
+    const visibleMatches = matches.filter((match) => (
+      matchTab === 'FINISHED' ? match.status === 'FINISHED' : match.status !== 'FINISHED'
+    ));
     const sortedGroupsForMatches = [...groups].sort((a, b) => a.displayOrder - b.displayOrder);
     matchesContent = (
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
           Confrontos
         </Typography>
-        <Stack spacing={1.5}>
-          {sortedGroupsForMatches.map((group) => {
-            const groupMatches = matches
-              .filter((m) => m.groupId === group.id)
-              .sort((a, b) => (a.scheduledAt ?? '').localeCompare(b.scheduledAt ?? ''));
-            if (groupMatches.length === 0) return null;
-            return (
+        <Tabs value={matchTab} onChange={(_, value: 'OPEN' | 'FINISHED') => setMatchTab(value)} sx={{ mb: 2 }}>
+          <Tab value="OPEN" label={`Não finalizados (${matches.filter((match) => match.status !== 'FINISHED').length})`} />
+          <Tab value="FINISHED" label={`Finalizados (${matches.filter((match) => match.status === 'FINISHED').length})`} />
+        </Tabs>
+        {visibleMatches.length === 0 ? (
+          <EmptyState title="Nenhum confronto finalizado" />
+        ) : (
+          <Stack spacing={1.5}>
+            {sortedGroupsForMatches.map((group) => {
+              const groupMatches = visibleMatches
+                .filter((m) => m.groupId === group.id)
+                .sort((a, b) => {
+                  const stageOrder = {
+                    GROUP_STAGE: 0,
+                    QUARTERFINALS: 1,
+                    SEMIFINALS: 2,
+                    FINAL: 3,
+                  } as const;
+                  const stageDifference = (stageOrder[a.stage ?? 'GROUP_STAGE'] ?? -1)
+                    - (stageOrder[b.stage ?? 'GROUP_STAGE'] ?? -1);
+                  return stageDifference || (a.scheduledAt ?? '').localeCompare(b.scheduledAt ?? '');
+                });
+              if (groupMatches.length === 0) return null;
+              return (
               <Paper
                 key={group.id}
                 variant="outlined"
@@ -574,9 +500,14 @@ export function GroupsPage() {
                         <Box
                           key={match.id}
                           sx={{
-                            display: 'flex',
+                            display: 'grid',
+                            gridTemplateColumns: {
+                              xs: '92px minmax(96px, 1fr) 68px minmax(96px, 1fr) 88px',
+                              md: '110px minmax(150px, 1fr) 68px minmax(150px, 1fr) 120px 108px',
+                            },
                             alignItems: 'center',
-                            gap: 1.5,
+                            columnGap: 1,
+                            rowGap: 2,
                             px: 2,
                             py: 1.25,
                             border: '1px solid',
@@ -590,18 +521,25 @@ export function GroupsPage() {
                             },
                           }}
                         >
-                          <Box sx={{ flexShrink: 0 }}>
+                          <Stack spacing={0.25} alignItems="center" sx={{ flexShrink: 0, minWidth: 92 }}>
                             <StatusBadge status={match.status} />
-                          </Box>
-
-                          <Stack direction="row" alignItems="center" spacing={1} flex={1} justifyContent="flex-end" sx={{ minWidth: 0 }}>
-                            <Typography noWrap fontWeight={700} variant="body2">
-                              {homeTeam?.name ?? `Equipe #${match.homeTeamId}`}
+                            <Typography variant="caption" color="text.secondary" noWrap>
+                              {STAGE_LABELS[match.stage ?? 'GROUP_STAGE']}
                             </Typography>
-                            <Avatar src={homeTeam?.logo ?? undefined} variant="rounded" sx={{ width: 28, height: 28, flexShrink: 0 }} />
                           </Stack>
 
-                          <Box sx={{ flexShrink: 0, textAlign: 'center', minWidth: 52 }}>
+                          <Stack
+                            alignItems="center"
+                            spacing={0.5}
+                            sx={{ width: { xs: '100%', md: 180 }, maxWidth: '100%', minWidth: 0, justifySelf: 'end' }}
+                          >
+                            <Avatar src={homeTeam?.logo ?? undefined} variant="rounded" sx={{ width: 44, height: 44, flexShrink: 0 }} />
+                            <Typography noWrap fontWeight={800} variant="body1" textAlign="center" sx={{ maxWidth: '100%' }}>
+                              {homeTeam?.name ?? 'TBD'}
+                            </Typography>
+                          </Stack>
+
+                          <Box sx={{ flexShrink: 0, textAlign: 'center', minWidth: 68 }}>
                             <Typography variant="h6" fontWeight={900} lineHeight={1}>
                               {match.homeSetsWon}
                               <Typography component="span" color="text.disabled" sx={{ mx: 0.5, fontWeight: 400 }}>×</Typography>
@@ -609,15 +547,18 @@ export function GroupsPage() {
                             </Typography>
                           </Box>
 
-                          <Stack direction="row" alignItems="center" spacing={1} flex={1} sx={{ minWidth: 0 }}>
-                            <Avatar src={awayTeam?.logo ?? undefined} variant="rounded" sx={{ width: 28, height: 28, flexShrink: 0 }} />
-                            <Typography noWrap fontWeight={700} variant="body2">
-                              {awayTeam?.name ?? `Equipe #${match.awayTeamId}`}
+                          <Stack
+                            alignItems="center"
+                            spacing={0.5}
+                            sx={{ width: { xs: '100%', md: 180 }, maxWidth: '100%', minWidth: 0, justifySelf: 'start' }}
+                          >
+                            <Avatar src={awayTeam?.logo ?? undefined} variant="rounded" sx={{ width: 44, height: 44, flexShrink: 0 }} />
+                            <Typography noWrap fontWeight={800} variant="body1" textAlign="center" sx={{ maxWidth: '100%' }}>
+                              {awayTeam?.name ?? 'TBD'}
                             </Typography>
                           </Stack>
 
-                          {(match.scheduledAt || match.court) && (
-                            <Stack sx={{ flexShrink: 0, minWidth: 110, display: { xs: 'none', md: 'flex' } }} alignItems="flex-end">
+                          <Stack sx={{ minWidth: 0, overflow: 'hidden', display: { xs: 'none', md: 'flex' } }} alignItems="flex-end">
                               {match.scheduledAt && (
                                 <Typography variant="caption" color="text.secondary" noWrap>
                                   {formatDateTime(match.scheduledAt)}
@@ -628,10 +569,9 @@ export function GroupsPage() {
                                   {match.court}
                                 </Typography>
                               )}
-                            </Stack>
-                          )}
+                          </Stack>
 
-                          <Stack direction="row" spacing={0.25} flexShrink={0}>
+                          <Stack direction="row" spacing={0.25} sx={{ width: 108, justifyContent: 'flex-end' }}>
                             <IconButton size="small" color="info" title="Súmula" onClick={() => openSummary(match)}>
                               <AssignmentIcon fontSize="small" />
                             </IconButton>
@@ -648,9 +588,10 @@ export function GroupsPage() {
                   </Stack>
                 </Box>
               </Paper>
-            );
-          })}
-        </Stack>
+              );
+            })}
+          </Stack>
+        )}
       </Box>
     );
   }
@@ -672,7 +613,7 @@ export function GroupsPage() {
               onClick={generateGroupMatches}
               disabled={generatingMatches || groups.length === 0}
             >
-              {generatingMatches ? 'Verificando...' : 'Gerar confrontos'}
+              {generatingMatches ? 'Gerando...' : 'Gerar confrontos'}
             </Button>
           </Stack>
         }
@@ -730,104 +671,6 @@ export function GroupsPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Generate matches — collect date/time/court per pair before creating */}
-      <Dialog
-        open={generateDialogOpen}
-        onClose={() => !confirming && setGenerateDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-        scroll="paper"
-      >
-        <DialogTitle>Configurar confrontos</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={3} sx={{ pt: 0.5 }}>
-            {Object.entries(
-              pendingPairs.reduce<Record<string, PendingPair[]>>((acc, p) => {
-                if (!acc[p.groupName]) acc[p.groupName] = [];
-                acc[p.groupName].push(p);
-                return acc;
-              }, {}),
-            ).map(([groupName, pairs]) => (
-              <Box key={groupName}>
-                <Typography
-                  sx={{
-                    mb: 1.5,
-                    color: 'text.secondary',
-                    fontWeight: 700,
-                    fontSize: 11,
-                    textTransform: 'uppercase',
-                    letterSpacing: 1,
-                  }}
-                >
-                  {groupName}
-                </Typography>
-                <Stack spacing={2}>
-                  {pairs.map((pair) => (
-                    <Box
-                      key={pair.key}
-                      sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}
-                    >
-                      <Typography
-                        variant="body2"
-                        fontWeight={700}
-                        noWrap
-                        sx={{ flex: '1 1 180px', minWidth: 0 }}
-                      >
-                        {pair.homeName}{' '}
-                        <Typography component="span" variant="body2" color="text.secondary" fontWeight={400}>
-                          ×
-                        </Typography>{' '}
-                        {pair.awayName}
-                      </Typography>
-                      <TextField
-                        label="Data"
-                        type="date"
-                        size="small"
-                        value={pair.date}
-                        onChange={(e) => updatePendingPair(pair.key, 'date', e.target.value)}
-                        slotProps={{ inputLabel: { shrink: true } }}
-                        sx={{ flex: '0 0 155px' }}
-                      />
-                      <TextField
-                        label="Horário"
-                        type="time"
-                        size="small"
-                        value={pair.time}
-                        onChange={(e) => updatePendingPair(pair.key, 'time', e.target.value)}
-                        slotProps={{ inputLabel: { shrink: true }, htmlInput: { step: 300 } }}
-                        sx={{ flex: '0 0 130px' }}
-                      />
-                      <TextField
-                        label="Local"
-                        size="small"
-                        placeholder="Opcional"
-                        value={pair.court}
-                        onChange={(e) => updatePendingPair(pair.key, 'court', e.target.value)}
-                        sx={{ flex: '1 1 160px' }}
-                      />
-                    </Box>
-                  ))}
-                </Stack>
-              </Box>
-            ))}
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setGenerateDialogOpen(false)} disabled={confirming}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<CheckIcon />}
-            onClick={confirmGenerateMatches}
-            disabled={confirming}
-          >
-            {confirming ? 'Gerando...' : `Gerar ${pendingPairs.length} confronto(s)`}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       <Dialog open={!!addTeamDialog} onClose={() => setAddTeamDialog(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Adicionar equipe ao grupo {addTeamDialog?.name}</DialogTitle>
         <DialogContent>
@@ -881,8 +724,9 @@ export function GroupsPage() {
                 label="Equipe A"
                 fullWidth
                 value={editMatchData.homeTeamId}
-                onChange={(e) => updateEditMatchData('homeTeamId', Number(e.target.value))}
+                onChange={(e) => updateEditMatchData('homeTeamId', e.target.value === '' ? null : Number(e.target.value))}
               >
+                <MenuItem value="">Sem equipe</MenuItem>
                 {teams.map((team) => (
                   <MenuItem key={team.id} value={team.id}>
                     {team.name}
@@ -894,8 +738,9 @@ export function GroupsPage() {
                 label="Equipe B"
                 fullWidth
                 value={editMatchData.awayTeamId}
-                onChange={(e) => updateEditMatchData('awayTeamId', Number(e.target.value))}
+                onChange={(e) => updateEditMatchData('awayTeamId', e.target.value === '' ? null : Number(e.target.value))}
               >
+                <MenuItem value="">Sem equipe</MenuItem>
                 {teams.map((team) => (
                   <MenuItem key={team.id} value={team.id}>
                     {team.name}
@@ -931,9 +776,9 @@ export function GroupsPage() {
             onClick={handleSaveMatch}
             disabled={
               savingMatch ||
-              editMatchData.homeTeamId === '' ||
-              editMatchData.awayTeamId === '' ||
-              editMatchData.homeTeamId === editMatchData.awayTeamId
+              (editMatchData.homeTeamId !== null &&
+                editMatchData.awayTeamId !== null &&
+                editMatchData.homeTeamId === editMatchData.awayTeamId)
             }
           >
             {savingMatch ? 'Salvando...' : 'Salvar'}
@@ -968,7 +813,7 @@ export function GroupsPage() {
                   <Stack alignItems="center" spacing={0.5} flex={1}>
                     <Avatar src={homeTeam?.logo ?? undefined} variant="rounded" sx={{ width: 44, height: 44 }} />
                     <Typography fontWeight={700} textAlign="center" variant="body2">
-                      {homeTeam?.name ?? `Equipe #${summaryMatch.homeTeamId}`}
+                      {homeTeam?.name ?? 'TBD'}
                     </Typography>
                   </Stack>
                   <Typography variant="h4" fontWeight={900}>
@@ -977,7 +822,7 @@ export function GroupsPage() {
                   <Stack alignItems="center" spacing={0.5} flex={1}>
                     <Avatar src={awayTeam?.logo ?? undefined} variant="rounded" sx={{ width: 44, height: 44 }} />
                     <Typography fontWeight={700} textAlign="center" variant="body2">
-                      {awayTeam?.name ?? `Equipe #${summaryMatch.awayTeamId}`}
+                      {awayTeam?.name ?? 'TBD'}
                     </Typography>
                   </Stack>
                 </Stack>
