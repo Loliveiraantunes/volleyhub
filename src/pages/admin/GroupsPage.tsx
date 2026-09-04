@@ -304,19 +304,19 @@ export function GroupsPage() {
     setSummarySets((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
   };
 
+  const hasUnsavedSummaryChanges = summaryMatch
+    ? JSON.stringify(summarySets) !== JSON.stringify(summaryMatch.sets.map((set) => ({
+      setNumber: set.setNumber,
+      homePoints: set.homePoints,
+      awayPoints: set.awayPoints,
+    })))
+    : false;
+
   const handleSaveSummary = async () => {
     if (!summaryMatch) return;
     setSavingSummary(true);
     try {
-      const updated = await matchService.update(summaryMatch.id, {
-        groupId: summaryMatch.groupId,
-        homeTeamId: summaryMatch.homeTeamId,
-        awayTeamId: summaryMatch.awayTeamId,
-        scheduledAt: summaryMatch.scheduledAt,
-        court: summaryMatch.court,
-        status: summaryMatch.status === 'SCHEDULED' && summarySets.length > 0 ? 'IN_PROGRESS' : summaryMatch.status,
-        sets: summarySets,
-      });
+      const updated = await matchService.updateSets(summaryMatch.id, summarySets);
       setSummaryMatch(updated);
       setMatches((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
       enqueueSnackbar('Súmula salva.', { variant: 'success' });
@@ -328,7 +328,7 @@ export function GroupsPage() {
   };
 
   const handleFinalizeSummary = async () => {
-    if (!summaryMatch) return;
+    if (!summaryMatch || hasUnsavedSummaryChanges) return;
     setSavingSummary(true);
     try {
       const updated = await matchService.update(summaryMatch.id, {
@@ -874,7 +874,7 @@ export function GroupsPage() {
             variant="contained"
             color="success"
             onClick={() => setConfirmFinalizeOpen(true)}
-            disabled={savingSummary || summarySets.length === 0}
+            disabled={savingSummary || summarySets.length === 0 || hasUnsavedSummaryChanges}
           >
             Finalizar súmula
           </Button>
@@ -883,8 +883,8 @@ export function GroupsPage() {
 
       <ConfirmDialog
         open={confirmFinalizeOpen}
-        title="Finalizar súmula"
-        description="Após finalizar, o resultado será registrado e a classificação será atualizada. Deseja continuar?"
+        title="Confirmar finalização da partida"
+        description="A partida será finalizada ao clicar em Finalizar. O resultado será registrado e a classificação será atualizada. Deseja continuar?"
         confirmLabel="Finalizar"
         loading={savingSummary}
         onConfirm={handleFinalizeSummary}

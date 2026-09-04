@@ -179,6 +179,12 @@ export interface StandingsEntry {
   teamName: string;
   logo?: string | null;
   points: number;
+  wins?: number;
+  victories?: number;
+  matchesWon?: number;
+  setsWon?: number;
+  wonSets?: number;
+  totalSetsWon?: number;
 }
 
 export interface GroupStandings {

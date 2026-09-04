@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import GroupsIcon from '@mui/icons-material/Groups';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PersonIcon from '@mui/icons-material/Person';
 import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import LaunchIcon from '@mui/icons-material/Launch';
+import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
 import { useSelectedEvent } from '../../contexts/SelectedEventContext';
 import { teamService } from '../../services/teamService';
 import { playerService } from '../../services/playerService';
@@ -19,10 +21,25 @@ import { PageHeader } from '../../components/PageHeader';
 import { MatchCard } from '../../components/MatchCard';
 import { StandingsTable } from '../../components/StandingsTable';
 
+const STAGE_ORDER = {
+  GROUP_STAGE: 0,
+  QUARTERFINALS: 1,
+  SEMIFINALS: 2,
+  FINAL: 3,
+} as const;
+
 function SummaryCard({ icon, label, value, color }: Readonly<{ icon: React.ReactNode; label: string; value: number | string; color: string }>) {
   return (
-    <Card variant="outlined">
-      <CardContent>
+    <Card
+      variant="outlined"
+      sx={{
+        height: '100%',
+        borderTop: `3px solid ${color}`,
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.1)' },
+      }}
+    >
+      <CardContent sx={{ height: '100%', boxSizing: 'border-box' }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <Box sx={{ bgcolor: color, color: '#fff', borderRadius: 2, p: 1, display: 'flex' }}>{icon}</Box>
           <Box>
@@ -42,11 +59,15 @@ function SummaryCard({ icon, label, value, color }: Readonly<{ icon: React.React
 export function DashboardPage() {
   const { selectedEvent } = useSelectedEvent();
   const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar();
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [standings, setStandings] = useState<GroupStandings[]>([]);
   const [playersCount, setPlayersCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [editingMatch, setEditingMatch] = useState<Match | null>(null);
+  const [editData, setEditData] = useState({ scheduledAt: '', court: '' });
+  const [savingMatch, setSavingMatch] = useState(false);
 
   useEffect(() => {
     if (!selectedEvent) {
@@ -79,9 +100,49 @@ export function DashboardPage() {
   const approvedTeams = teams.filter((t) => t.registrationStatus === 'APPROVED').length;
   const finishedMatches = matches.filter((m) => m.status === 'FINISHED').length;
   const upcomingMatches = matches
-    .filter((m) => m.status === 'SCHEDULED')
-    .sort((a, b) => (a.scheduledAt ?? '').localeCompare(b.scheduledAt ?? ''))
+    .filter((m) => m.status !== 'FINISHED')
+    .sort((a, b) => {
+      const stageDifference = (STAGE_ORDER[a.stage ?? 'GROUP_STAGE'] ?? -1)
+        - (STAGE_ORDER[b.stage ?? 'GROUP_STAGE'] ?? -1);
+      return stageDifference || (a.scheduledAt ?? '').localeCompare(b.scheduledAt ?? '');
+    })
     .slice(0, 4);
+
+  const openEditMatch = (match: Match) => {
+    setEditingMatch(match);
+    setEditData({
+      scheduledAt: match.scheduledAt ? dayjs(match.scheduledAt).format('YYYY-MM-DDTHH:mm') : '',
+      court: match.court ?? '',
+    });
+  };
+
+  const saveMatchDetails = async () => {
+    if (!editingMatch) return;
+    setSavingMatch(true);
+    try {
+      const updated = await matchService.update(editingMatch.id, {
+        groupId: editingMatch.groupId,
+        homeTeamId: editingMatch.homeTeamId,
+        awayTeamId: editingMatch.awayTeamId,
+        scheduledAt: editData.scheduledAt ? dayjs(editData.scheduledAt).toISOString() : null,
+        court: editData.court || null,
+        status: editingMatch.status,
+        sets: editingMatch.sets.map((set) => ({
+          setNumber: set.setNumber,
+          homePoints: set.homePoints,
+          awayPoints: set.awayPoints,
+        })),
+      });
+      setMatches((current) => current.map((match) => match.id === updated.id ? updated : match));
+      setEditingMatch(null);
+    } catch (err) {
+      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível atualizar a partida.', {
+        variant: 'error',
+      });
+    } finally {
+      setSavingMatch(false);
+    }
+  };
 
   if (!selectedEvent) {
     return (
@@ -140,15 +201,18 @@ export function DashboardPage() {
             Próximos confrontos
           </Typography>
           {upcomingMatches.length === 0 ? (
-            <EmptyState title="Nenhum confronto agendado" />
+            <EmptyState title="Nenhum confronto próximo" />
           ) : (
             <Stack spacing={2}>
               {upcomingMatches.map((m) => (
                 <MatchCard
                   key={m.id}
                   match={m}
-                  homeTeamName={teamsById.get(m.homeTeamId)?.name ?? '—'}
-                  awayTeamName={teamsById.get(m.awayTeamId)?.name ?? '—'}
+                  homeTeamName={teamsById.get(m.homeTeamId)?.name ?? 'TBD'}
+                  awayTeamName={teamsById.get(m.awayTeamId)?.name ?? 'TBD'}
+                  homeTeamLogo={teamsById.get(m.homeTeamId)?.logo}
+                  awayTeamLogo={teamsById.get(m.awayTeamId)?.logo}
+                  onEdit={() => openEditMatch(m)}
                   onClick={() => navigate(`/admin/matches/${m.id}`)}
                 />
               ))}
@@ -170,6 +234,34 @@ export function DashboardPage() {
           )}
         </Box>
       </Box>
+
+      <Dialog open={!!editingMatch} onClose={() => !savingMatch && setEditingMatch(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Editar dados da partida</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <TextField
+              label="Data e horário"
+              type="datetime-local"
+              fullWidth
+              value={editData.scheduledAt}
+              onChange={(event) => setEditData((current) => ({ ...current, scheduledAt: event.target.value }))}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              label="Local"
+              fullWidth
+              value={editData.court}
+              onChange={(event) => setEditData((current) => ({ ...current, court: event.target.value }))}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditingMatch(null)} disabled={savingMatch}>Cancelar</Button>
+          <Button variant="contained" onClick={saveMatchDetails} disabled={savingMatch}>
+            {savingMatch ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

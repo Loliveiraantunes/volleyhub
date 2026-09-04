@@ -67,19 +67,19 @@ export function MatchSummaryPage() {
     setSets((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
   };
 
+  const hasUnsavedSetChanges = match
+    ? JSON.stringify(sets) !== JSON.stringify(match.sets.map((set) => ({
+      setNumber: set.setNumber,
+      homePoints: set.homePoints,
+      awayPoints: set.awayPoints,
+    })))
+    : false;
+
   const saveProgress = async () => {
     if (!match) return;
     setSaving(true);
     try {
-      const updated = await matchService.update(match.id, {
-        groupId: match.groupId,
-        homeTeamId: match.homeTeamId,
-        awayTeamId: match.awayTeamId,
-        scheduledAt: match.scheduledAt,
-        court: match.court,
-        status: match.status === 'SCHEDULED' && sets.length > 0 ? 'IN_PROGRESS' : match.status,
-        sets,
-      });
+      const updated = await matchService.updateSets(match.id, sets);
       setMatch(updated);
       enqueueSnackbar('Súmula salva.', { variant: 'success' });
     } catch (err) {
@@ -92,7 +92,7 @@ export function MatchSummaryPage() {
   };
 
   const finalize = async () => {
-    if (!match) return;
+    if (!match || hasUnsavedSetChanges) return;
     setSaving(true);
     try {
       const updated = await matchService.update(match.id, {
@@ -323,7 +323,7 @@ export function MatchSummaryPage() {
             variant="contained"
             color="success"
             onClick={() => setConfirmOpen(true)}
-            disabled={saving || sets.length === 0}
+            disabled={saving || sets.length === 0 || hasUnsavedSetChanges}
           >
             Finalizar súmula
           </Button>
@@ -332,8 +332,8 @@ export function MatchSummaryPage() {
 
       <ConfirmDialog
         open={confirmOpen}
-        title="Finalizar súmula"
-        description="Após finalizar, o resultado será registrado e a classificação será atualizada. Deseja continuar?"
+        title="Confirmar finalização da partida"
+        description="A partida será finalizada ao clicar em Finalizar. O resultado será registrado e a classificação será atualizada. Deseja continuar?"
         confirmLabel="Finalizar"
         loading={saving}
         onConfirm={finalize}

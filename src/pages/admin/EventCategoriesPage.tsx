@@ -1,22 +1,32 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, IconButton, Stack, Switch, TextField } from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  IconButton,
+  Stack,
+  Switch,
+  TextField,
+  Typography,
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CategoryIcon from '@mui/icons-material/Category';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import { useSnackbar } from 'notistack';
 import { PageHeader } from '../../components/PageHeader';
 import { DataTable } from '../../components/DataTable';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { eventCategoryService } from '../../services/eventCategoryService';
 import type { EventCategory } from '../../types/api';
-import {
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-} from '@mui/material';
-
 export function EventCategoriesPage() {
   const { enqueueSnackbar } = useSnackbar();
   const [categories, setCategories] = useState<EventCategory[]>([]);
@@ -99,14 +109,50 @@ export function EventCategoriesPage() {
   return (
     <Box>
       <PageHeader
-        title="Configurações — Categorias"
-        subtitle="Gerencie as categorias disponíveis para os eventos"
+        title="Categorias"
+        subtitle="Organize as categorias disponíveis para os eventos"
         actions={
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
             Nova categoria
           </Button>
         }
       />
+
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 3 }}>
+        <Card variant="outlined" sx={{ borderTop: '3px solid', borderTopColor: 'primary.main' }}>
+          <CardContent>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <CategoryIcon color="primary" />
+              <Box>
+                <Typography variant="h5" fontWeight={800}>{categories.length}</Typography>
+                <Typography variant="body2" color="text.secondary">Total de categorias</Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+        <Card variant="outlined" sx={{ borderTop: '3px solid', borderTopColor: 'success.main' }}>
+          <CardContent>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <CheckCircleIcon color="success" />
+              <Box>
+                <Typography variant="h5" fontWeight={800}>{categories.filter((category) => category.active).length}</Typography>
+                <Typography variant="body2" color="text.secondary">Categorias ativas</Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+        <Card variant="outlined" sx={{ borderTop: '3px solid', borderTopColor: 'warning.main' }}>
+          <CardContent>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <FilterAltIcon color="warning" />
+              <Box>
+                <Typography variant="h5" fontWeight={800}>{categories.filter((category) => category.minimumAgeEnabled).length}</Typography>
+                <Typography variant="body2" color="text.secondary">Com restrição de idade</Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
 
       <DataTable
         loading={loading}

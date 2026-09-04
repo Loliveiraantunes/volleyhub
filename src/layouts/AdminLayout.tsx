@@ -25,7 +25,7 @@ import EventIcon from '@mui/icons-material/Event';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
-import SettingsIcon from '@mui/icons-material/Settings';
+import CategoryIcon from '@mui/icons-material/Category';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -51,7 +51,7 @@ export function AdminLayout() {
     { label: 'Equipes', icon: <GroupsIcon />, to: eventId ? `/admin/events/${eventId}/teams` : '/admin/events', disabled: !eventId },
     { label: 'Grupos', icon: <ViewModuleIcon />, to: eventId ? `/admin/events/${eventId}/groups` : '/admin/events', disabled: !eventId },
     { label: 'Classificação', icon: <LeaderboardIcon />, to: eventId ? `/admin/events/${eventId}/standings` : '/admin/events', disabled: !eventId },
-    { label: 'Configurações', icon: <SettingsIcon />, to: '/admin/settings/categories' },
+    { label: 'Categorias', icon: <CategoryIcon />, to: '/admin/settings/categories' },
   ];
 
   const drawerContent = (
