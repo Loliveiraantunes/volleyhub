@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Grid, IconButton, Menu, MenuItem, Stack } from '@mui/material';
+import type { ReactNode } from 'react';
+import { Box, Button, IconButton, Menu, MenuItem, Stack } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -10,7 +11,6 @@ import { Loading } from '../../components/Loading';
 import { EmptyState } from '../../components/EmptyState';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EventCard } from '../../components/EventCard';
-import { Button } from '@mui/material';
 import { eventService } from '../../services/eventService';
 import { eventCategoryService } from '../../services/eventCategoryService';
 import type { Event, EventCategory } from '../../types/api';
@@ -63,6 +63,51 @@ export function EventsListPage() {
 
   const category = (id: number) => categories.find((c) => c.id === id);
 
+  let eventContent: ReactNode;
+  if (loading) {
+    eventContent = <Loading />;
+  } else if (events.length === 0) {
+    eventContent = (
+      <EmptyState
+        title="Nenhum evento cadastrado"
+        description="Crie o primeiro evento para começar a gerenciar o campeonato."
+        action={
+          <Button variant="contained" onClick={() => navigate('/admin/events/new')}>
+            Criar evento
+          </Button>
+        }
+      />
+    );
+  } else {
+    eventContent = (
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: { xs: 1.5, sm: 2 }, width: '100%' }}>
+        {events.map((event) => {
+          const currentCategory = category(event.categoryId);
+          return (
+            <Box key={event.id} sx={{ minWidth: 0 }}>
+              <Stack sx={{ position: 'relative' }}>
+                <IconButton
+                  size="small"
+                  sx={{ position: 'absolute', top: 4, right: 4, zIndex: 1, bgcolor: 'background.paper' }}
+                  onClick={(e) => setMenuState({ anchor: e.currentTarget, event })}
+                >
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
+                <EventCard
+                  event={event}
+                  categoryName={currentCategory?.name}
+                  categoryMinimumAgeEnabled={currentCategory?.minimumAgeEnabled}
+                  categoryMinimumAge={currentCategory?.minimumAge}
+                  onClick={() => handleManage(event)}
+                />
+              </Stack>
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -75,45 +120,7 @@ export function EventsListPage() {
         }
       />
 
-      {loading ? (
-        <Loading />
-      ) : events.length === 0 ? (
-        <EmptyState
-          title="Nenhum evento cadastrado"
-          description="Crie o primeiro evento para começar a gerenciar o campeonato."
-          action={
-            <Button variant="contained" onClick={() => navigate('/admin/events/new')}>
-              Criar evento
-            </Button>
-          }
-        />
-      ) : (
-        <Grid container spacing={2}>
-          {events.map((event) => {
-            const currentCategory = category(event.categoryId);
-            return (
-              <Grid item xs={12} sm={6} md={4} key={event.id}>
-                <Stack sx={{ position: 'relative' }}>
-                  <IconButton
-                    size="small"
-                    sx={{ position: 'absolute', top: 4, right: 4, zIndex: 1, bgcolor: 'background.paper' }}
-                    onClick={(e) => setMenuState({ anchor: e.currentTarget, event })}
-                  >
-                    <MoreVertIcon fontSize="small" />
-                  </IconButton>
-                  <EventCard
-                    event={event}
-                    categoryName={currentCategory?.name}
-                    categoryMinimumAgeEnabled={currentCategory?.minimumAgeEnabled}
-                    categoryMinimumAge={currentCategory?.minimumAge}
-                    onClick={() => handleManage(event)}
-                  />
-                </Stack>
-              </Grid>
-            );
-          })}
-        </Grid>
-      )}
+      {eventContent}
 
       <Menu anchorEl={menuState?.anchor} open={!!menuState} onClose={() => setMenuState(null)}>
         <MenuItem

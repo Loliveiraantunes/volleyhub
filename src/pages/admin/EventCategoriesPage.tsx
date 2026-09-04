@@ -119,10 +119,10 @@ export function EventCategoriesPage() {
       />
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 3 }}>
-        <Card variant="outlined" sx={{ borderTop: '3px solid', borderTopColor: 'primary.main' }}>
+        <Card variant="outlined" sx={{ borderTop: '3px solid #5a5e67', transition: 'border-color 0.2s', '&:hover': { borderTopColor: 'primary.main' } }}>
           <CardContent>
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <CategoryIcon color="primary" />
+              <CategoryIcon sx={{ color: '#d0d3da' }} />
               <Box>
                 <Typography variant="h5" fontWeight={800}>{categories.length}</Typography>
                 <Typography variant="body2" color="text.secondary">Total de categorias</Typography>
@@ -130,10 +130,10 @@ export function EventCategoriesPage() {
             </Stack>
           </CardContent>
         </Card>
-        <Card variant="outlined" sx={{ borderTop: '3px solid', borderTopColor: 'success.main' }}>
+        <Card variant="outlined" sx={{ borderTop: '3px solid #5a5e67', transition: 'border-color 0.2s', '&:hover': { borderTopColor: 'primary.main' } }}>
           <CardContent>
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <CheckCircleIcon color="success" />
+              <CheckCircleIcon sx={{ color: '#d0d3da' }} />
               <Box>
                 <Typography variant="h5" fontWeight={800}>{categories.filter((category) => category.active).length}</Typography>
                 <Typography variant="body2" color="text.secondary">Categorias ativas</Typography>
@@ -141,10 +141,10 @@ export function EventCategoriesPage() {
             </Stack>
           </CardContent>
         </Card>
-        <Card variant="outlined" sx={{ borderTop: '3px solid', borderTopColor: 'warning.main' }}>
+        <Card variant="outlined" sx={{ borderTop: '3px solid #5a5e67', transition: 'border-color 0.2s', '&:hover': { borderTopColor: 'primary.main' } }}>
           <CardContent>
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <FilterAltIcon color="warning" />
+              <FilterAltIcon sx={{ color: '#d0d3da' }} />
               <Box>
                 <Typography variant="h5" fontWeight={800}>{categories.filter((category) => category.minimumAgeEnabled).length}</Typography>
                 <Typography variant="body2" color="text.secondary">Com restrição de idade</Typography>
@@ -161,7 +161,7 @@ export function EventCategoriesPage() {
         emptyTitle="Nenhuma categoria cadastrada"
         columns={[
           { key: 'name', header: 'Nome', render: (c) => c.name },
-          { key: 'active', header: 'Ativa', render: (c) => (c.active ? 'Sim' : 'Não') },
+          { key: 'active', header: 'Ativa', render: (c) => <Box component="span" sx={{ color: c.active ? '#a7e3ad' : 'text.secondary', fontWeight: 800 }}>{c.active ? 'Sim' : 'Não'}</Box> },
           {
             key: 'minimumAge',
             header: 'Restrição de idade',

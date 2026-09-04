@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Grid, TextField } from '@mui/material';
@@ -12,12 +12,21 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+function formatCpfInput(value: string | null | undefined) {
+  const digits = (value ?? '').replace(/\D/g, '').slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
 interface PlayerFormProps {
   onSubmit: (data: PlayerRequest) => Promise<void> | void;
 }
 
-export function PlayerForm({ onSubmit }: PlayerFormProps) {
+export function PlayerForm({ onSubmit }: Readonly<PlayerFormProps>) {
   const {
+    control,
     register,
     handleSubmit,
     reset,
@@ -43,7 +52,20 @@ export function PlayerForm({ onSubmit }: PlayerFormProps) {
           />
         </Grid>
         <Grid item xs={6} sm={5}>
-          <TextField label="CPF" fullWidth size="small" {...register('cpf')} />
+          <Controller
+            name="cpf"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                label="CPF"
+                fullWidth
+                size="small"
+                value={formatCpfInput(field.value)}
+                onChange={(event) => field.onChange(event.target.value.replace(/\D/g, '').slice(0, 11))}
+                slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 14 } }}
+              />
+            )}
+          />
         </Grid>
         <Grid item xs={6} sm={5}>
           <TextField

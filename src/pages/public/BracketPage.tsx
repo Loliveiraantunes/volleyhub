@@ -29,7 +29,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { publicEventService } from '../../services/eventService';
 import { standingsService } from '../../services/standingsService';
 import type { BracketGroup, BracketGroupTree, Event } from '../../types/api';
-import { formatDateTime } from '../../utils/format';
+import { formatDateTime, matchStatusLabels } from '../../utils/format';
 
 type BracketData = BracketGroup[] | BracketGroupTree[];
 
@@ -117,7 +117,23 @@ const CARD_GAP = 50;
 const COL_W = 220;
 const COL_GAP = 40;
 const ROUND_TITLES = ['Opening round', 'Upper semi-finals', 'Upper final', 'Final'];
-const LINE_COLOR = 'rgba(21,101,192,0.28)';
+const LINE_COLOR = 'rgba(230,57,70,0.62)';
+
+const STAGE_LABELS: Record<string, string> = {
+  'Opening round': 'Fase de Grupos',
+  'Group Stage': 'Fase de Grupos',
+  Quarterfinals: 'Quartas de Finais',
+  Quarterfinal: 'Quartas de Finais',
+  'Upper semi-finals': 'Semi-Finais',
+  Semifinals: 'Semi-Finais',
+  Semifinal: 'Semi-Finais',
+  'Upper final': 'Finais',
+  Final: 'Finais',
+};
+
+function formatStageLabel(stage: string) {
+  return STAGE_LABELS[stage] ?? stage;
+}
 
 function buildRoundsFromGroup(group: BracketGroup): LegacyBracketRound[] {
   const sorted = [...group.teams].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -168,13 +184,13 @@ function matchTopY(roundIndex: number, matchIndex: number): number {
 }
 
 function resolveRowBg(isWinner: boolean, isTop: boolean): string {
-  if (isWinner) return 'rgba(46, 125, 50, 0.07)';
-  if (!isTop) return 'rgba(0,0,0,0.03)';
+  if (isWinner) return 'rgba(76, 175, 80, 0.18)';
+  if (!isTop) return 'rgba(0,0,0,0.12)';
   return 'transparent';
 }
 
 function resolveTeamBorderColor(team: TeamSlot, isFinished: boolean, isWinner: boolean): string {
-  if (!team || !isFinished) return '#3a4455';
+  if (!team || !isFinished) return '#69717d';
   return isWinner ? '#4caf50' : '#ef5350';
 }
 
@@ -200,7 +216,7 @@ function MatchRow({
   setsWon,
 }: Readonly<MatchRowProps>) {
   let nameColor = team ? textColor : mutedColor;
-  if (isWinner) nameColor = '#2e7d32';
+    if (isWinner) nameColor = '#a7e3ad';
   return (
     <Box
       sx={{
@@ -219,7 +235,11 @@ function MatchRow({
         '&:hover': { bgcolor: hoverColor },
       }}
     >
-      <Avatar src={team?.logo ?? undefined} variant="rounded" sx={{ width: 24, height: 24, flexShrink: 0 }} />
+      <Avatar
+        src={team?.logo ?? undefined}
+        variant="rounded"
+        sx={{ width: 24, height: 24, flexShrink: 0 }}
+      />
       <Typography noWrap sx={{ flex: 1, color: nameColor, fontSize: 13, fontWeight: isWinner ? 800 : 700 }}>
         {team?.teamName ?? 'TBD'}
       </Typography>
@@ -255,16 +275,16 @@ function BracketMatchCard({
         minWidth: 230,
         p: 1.25,
         borderRadius: 2,
-        bgcolor: '#ffffff',
-        color: '#1f2937',
-        border: '1px solid rgba(21, 101, 192, 0.18)',
-        boxShadow: '0 12px 28px rgba(21, 101, 192, 0.12)',
+        bgcolor: '#464950',
+        color: '#f2f3f5',
+        border: '1px solid #69717d',
+        boxShadow: '0 12px 28px rgba(0, 0, 0, 0.28)',
       }}
     >
       <Typography
         variant="caption"
         sx={{
-          color: '#1565c0',
+          color: '#ff5964',
           display: 'block',
           mb: 1,
           fontWeight: 800,
@@ -288,7 +308,7 @@ function BracketMatchCard({
 
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
           <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Placar</Typography>
-          <Typography variant="body2" sx={{ fontWeight: 800, color: '#1565c0', fontSize: '0.8125rem' }}>
+          <Typography variant="body2" sx={{ fontWeight: 800, color: '#ff5964', fontSize: '0.8125rem' }}>
             {match.homeSetsWon ?? 0} × {match.awaySetsWon ?? 0}
           </Typography>
         </Box>
@@ -313,11 +333,11 @@ function BracketMatchCard({
             variant="body2"
             sx={{
               fontWeight: 700,
-              color: match.status === 'FINISHED' ? '#2e7d32' : '#1565c0',
+              color: match.status === 'FINISHED' ? '#a7e3ad' : '#ff5964',
               fontSize: '0.8125rem',
             }}
           >
-            {match.status ?? 'SCHEDULED'}
+            {matchStatusLabels[match.status ?? 'SCHEDULED'] ?? match.status ?? 'Agendado'}
           </Typography>
         </Box>
       </Stack>
@@ -355,13 +375,13 @@ function BracketMatchCard({
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 4px 12px rgba(15, 23, 42, 0.04)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.18)',
           cursor: 'pointer',
           transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
           '&:hover': {
             transform: 'translateY(-1px)',
-            boxShadow: '0 8px 20px rgba(21, 101, 192, 0.08)',
-            borderColor: alpha('#1565c0', 0.2),
+            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.28)',
+            borderColor: '#e63946',
           },
         }}
       >
@@ -383,11 +403,11 @@ function BracketMatchCard({
           isWinner={match.winnerTeamId != null && match.away?.teamId === match.winnerTeamId}
           textColor={textColor}
           mutedColor={mutedColor}
-          hoverColor={alpha('#1565c0', 0.06)}
+          hoverColor="rgba(230,57,70,0.12)"
           setsWon={match.awaySetsWon}
         />
         {match.status !== 'FINISHED' && (match.court || match.scheduledAt) && (
-          <Box sx={{ px: 1.25, py: 0.75, borderTop: `1px solid ${dividerColor}`, bgcolor: alpha('#1565c0', 0.02) }}>
+          <Box sx={{ px: 1.25, py: 0.75, borderTop: `1px solid ${dividerColor}`, bgcolor: 'rgba(0,0,0,0.12)' }}>
             <Stack sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
               {match.court && (
                 <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
@@ -505,14 +525,34 @@ function GroupBracket({ group, onMatchClick }: Readonly<GroupBracketProps>) {
       </Box>
 
       <Collapse in={!collapsed}>
-        <Box sx={{ bgcolor: theme.palette.background.default, p: 2.5, overflowX: 'auto', minHeight: (totalH * 2), maxHeight:1000 }}>
+        <Box
+          sx={{
+            bgcolor: theme.palette.background.default,
+            p: { xs: 1.5, sm: 2.5 },
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            maxWidth: '100%',
+            minHeight: totalH * 2,
+            maxHeight: 1000,
+            WebkitOverflowScrolling: 'touch',
+            '&::-webkit-scrollbar': { height: 8 },
+            '&::-webkit-scrollbar-thumb': { bgcolor: 'primary.main', borderRadius: 1 },
+            '&::-webkit-scrollbar-track': { bgcolor: 'rgba(0,0,0,0.18)' },
+          }}
+        >
           {rounds.length === 0 ? (
             <Typography sx={{ color: mutedColor, fontSize: 13 }}>
               Sem equipes cadastradas neste grupo.
             </Typography>
           ) : (
             <>
-              <Stack direction="row" sx={{ mb: 2 }}>
+              <Typography
+                variant="caption"
+                sx={{ display: { xs: 'block', sm: 'none' }, mb: 1, color: mutedColor, fontWeight: 700 }}
+              >
+                Deslize horizontalmente para ver todas as fases
+              </Typography>
+              <Stack direction="row" sx={{ mb: 2, minWidth: totalW }}>
                 {rounds.map((round, ri) => (
                   <Box key={round.title} sx={{ width: COL_W, mr: `${ri < rounds.length - 1 ? COL_GAP : 0}px` }}>
                     <Box sx={{ bgcolor: 'rgba(21,101,192,0.08)', borderRadius: 0.75, px: 1.25, py: 0.5, textAlign: 'center' }}>
@@ -525,7 +565,7 @@ function GroupBracket({ group, onMatchClick }: Readonly<GroupBracketProps>) {
                           letterSpacing: 1,
                         }}
                       >
-                        {round.title}
+                        {formatStageLabel(round.title)}
                       </Typography>
                     </Box>
                   </Box>
@@ -599,9 +639,46 @@ export function BracketPage() {
     }
   };
 
+  const captureBracket = async () => {
+    if (!captureRef.current) return null;
+    const images = Array.from(captureRef.current.querySelectorAll('img'));
+    const originalSources = images.map((image) => image.src);
+    images.forEach((image) => {
+      try {
+        const source = new URL(image.src);
+        if (source.origin !== window.location.origin) {
+          image.src = `/media${source.pathname}${source.search}`;
+        }
+      } catch {
+        // Keep relative or data URLs unchanged.
+      }
+    });
+
+    try {
+      await Promise.all(images.map((image) => image.complete
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => {
+            image.addEventListener('load', () => resolve(), { once: true });
+            image.addEventListener('error', () => resolve(), { once: true });
+          })));
+      return await html2canvas(captureRef.current, {
+        backgroundColor: theme.palette.background.default,
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        imageTimeout: 15000,
+        logging: false,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+      });
+    } finally {
+      images.forEach((image, index) => { image.src = originalSources[index]; });
+    }
+  };
+
   const handleDownloadImage = async () => {
-    if (!captureRef.current) return;
-    const canvas = await html2canvas(captureRef.current, { backgroundColor: theme.palette.background.default, scale: 2 });
+    const canvas = await captureBracket();
+    if (!canvas) return;
     const link = document.createElement('a');
     link.download = `chave-${slug}.png`;
     link.href = canvas.toDataURL('image/png');
@@ -609,8 +686,8 @@ export function BracketPage() {
   };
 
   const handleDownloadPdf = async () => {
-    if (!captureRef.current) return;
-    const canvas = await html2canvas(captureRef.current, { backgroundColor: theme.palette.background.default, scale: 2 });
+    const canvas = await captureBracket();
+    if (!canvas) return;
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
     pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
     pdf.save(`chave-${slug}.pdf`);

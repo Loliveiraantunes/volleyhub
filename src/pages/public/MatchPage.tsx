@@ -18,7 +18,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { publicEventService } from '../../services/eventService';
 import { publicMatchService } from '../../services/matchService';
 import type { Event, MatchDetailResponse, TeamDetailResponse } from '../../types/api';
-import { formatDateTime, staffRoleLabels } from '../../utils/format';
+import { formatDateTime, matchStatusLabels, staffRoleLabels } from '../../utils/format';
 
 function TeamRoster({ team }: Readonly<{ team: TeamDetailResponse }>) {
   return (
@@ -159,7 +159,7 @@ export function MatchPage() {
           sx={{
             px: 3,
             py: 1.25,
-            bgcolor: 'rgba(21,101,192,0.04)',
+            bgcolor: 'rgba(0,0,0,0.14)',
             borderBottom: '1px solid',
             borderColor: 'divider',
             display: 'flex',
@@ -168,20 +168,20 @@ export function MatchPage() {
           }}
         >
           <Chip label={event.name} size="small" color="primary" variant="outlined" />
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            <Chip label={match.status} color={match.status === 'FINISHED' ? 'success' : 'primary'} size="small" />
-            {match.court && <Chip label={match.court} variant="outlined" size="small" />}
-            {match.scheduledAt && <Chip label={formatDateTime(match.scheduledAt)} variant="outlined" size="small" />}
+          <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end">
+            <Chip label={matchStatusLabels[match.status] ?? match.status} color={match.status === 'FINISHED' ? 'success' : 'primary'} size="small" />
+            {match.court && <Chip label={match.court} variant="outlined" size="small" sx={{ color: 'text.primary', borderColor: 'text.secondary' }} />}
+            {match.scheduledAt && <Chip label={formatDateTime(match.scheduledAt)} variant="outlined" size="small" sx={{ color: 'text.primary', borderColor: 'text.secondary' }} />}
           </Stack>
         </Box>
 
-        <Box sx={{ bgcolor: '#1a2a4a', px: { xs: 2.5, md: 5 }, py: { xs: 4, md: 5 } }}>
+        <Box sx={{ bgcolor: '#252b3d', borderTop: '3px solid', borderColor: 'primary.main', px: { xs: 2.5, md: 5 }, py: { xs: 4, md: 5 } }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 200px 1fr' }, gap: 3 }}>
             <Stack alignItems="center" spacing={1.5}>
               <Avatar
                 src={match.homeTeam.teamLogo ?? undefined}
                 variant="circular"
-                sx={{ width: { xs: 80, md: 104 }, height: { xs: 80, md: 104 }, bgcolor: 'white', border: '3px solid rgba(255,255,255,0.25)' }}
+                sx={{ width: { xs: 80, md: 104 }, height: { xs: 80, md: 104 }, bgcolor: '#464950', border: '3px solid rgba(255,255,255,0.5)' }}
               >
                 <GroupsIcon fontSize="large" />
               </Avatar>
@@ -194,7 +194,7 @@ export function MatchPage() {
                 </Typography>
               </Box>
               {match.winnerTeamId === match.homeTeam.teamId && (
-                <Chip label="Vencedor" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 700 }} />
+                <Chip label="Vencedor" size="small" sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 700 }} />
               )}
             </Stack>
 
@@ -206,7 +206,7 @@ export function MatchPage() {
                 >
                   {match.homeSetsWon}
                 </Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '2rem', fontWeight: 300 }}>×</Typography>
+                <Typography sx={{ color: '#ff5964', fontSize: '2rem', fontWeight: 400 }}>×</Typography>
                 <Typography
                   fontWeight={900}
                   sx={{ color: 'white', fontSize: { xs: '4rem', md: '5.5rem' }, lineHeight: 1 }}
@@ -226,7 +226,7 @@ export function MatchPage() {
               <Avatar
                 src={match.awayTeam.teamLogo ?? undefined}
                 variant="circular"
-                sx={{ width: { xs: 80, md: 104 }, height: { xs: 80, md: 104 }, bgcolor: 'white', border: '3px solid rgba(255,255,255,0.25)' }}
+                sx={{ width: { xs: 80, md: 104 }, height: { xs: 80, md: 104 }, bgcolor: '#464950', border: '3px solid rgba(255,255,255,0.5)' }}
               >
                 <GroupsIcon fontSize="large" />
               </Avatar>
@@ -239,7 +239,7 @@ export function MatchPage() {
                 </Typography>
               </Box>
               {match.winnerTeamId === match.awayTeam.teamId && (
-                <Chip label="Vencedor" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 700 }} />
+                <Chip label="Vencedor" size="small" sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 700 }} />
               )}
             </Stack>
           </Box>
@@ -270,7 +270,7 @@ export function MatchPage() {
                       borderRadius: 1.5,
                       border: '1px solid',
                       borderColor: 'divider',
-                      bgcolor: 'background.paper',
+                      bgcolor: 'rgba(0,0,0,0.12)',
                     }}
                   >
                     <Typography
@@ -318,7 +318,9 @@ export function MatchPage() {
               })}
             </Stack>
           ) : (
-            <Alert severity="info">Ainda não há registros de sets para esta partida.</Alert>
+            <Alert severity="info" sx={{ bgcolor: '#3d4650', color: '#e1e8ef', border: '1px solid #71808f', '& .MuiAlert-icon': { color: '#9ed8ee' } }}>
+              Ainda não há registros de sets para esta partida.
+            </Alert>
           )}
         </Paper>
       </Box>

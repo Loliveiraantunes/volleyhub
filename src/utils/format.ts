@@ -32,3 +32,22 @@ export const staffRoleLabels: Record<string, string> = {
   COACH: 'Técnico',
   ASSISTANT: 'Assistente/Auxiliar',
 };
+
+export const matchStatusLabels: Record<string, string> = {
+  AWAITING: 'Aguardando',
+  SCHEDULED: 'Agendado',
+  IN_PROGRESS: 'Em andamento',
+  FINISHED: 'Finalizado',
+  CANCELLED: 'Cancelado',
+};
+
+export const matchStageLabels: Record<string, string> = {
+  GROUP_STAGE: 'Fase de Grupos',
+  'Group Stage': 'Fase de Grupos',
+  QUARTERFINALS: 'Quartas de Finais',
+  Quarterfinals: 'Quartas de Finais',
+  SEMIFINALS: 'Semi-Finais',
+  Semifinals: 'Semi-Finais',
+  FINAL: 'Finais',
+  Final: 'Finais',
+};

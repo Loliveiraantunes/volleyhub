@@ -38,17 +38,17 @@ export function DataTable<T>({
   emptyTitle = 'Nenhum registro encontrado',
   emptyDescription,
   onRowClick,
-}: DataTableProps<T>) {
+}: Readonly<DataTableProps<T>>) {
   if (loading) return <Loading />;
   if (rows.length === 0) return <EmptyState title={emptyTitle} description={emptyDescription} />;
 
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
-      <Table sx={{ minWidth: 640 }}>
+    <TableContainer component={Paper} variant="outlined" sx={{ width: '100%', overflowX: 'auto', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.16)' }}>
+      <Table size="medium" sx={{ minWidth: 640 }}>
         <TableHead>
-          <TableRow>
+          <TableRow sx={{ bgcolor: '#2f3137' }}>
             {columns.map((col) => (
-              <TableCell key={col.key} align={col.align} width={col.width} sx={{ fontWeight: 700 }}>
+              <TableCell key={col.key} align={col.align} width={col.width} sx={{ fontWeight: 800, color: 'text.primary', whiteSpace: 'nowrap' }}>
                 {col.header}
               </TableCell>
             ))}
@@ -60,7 +60,11 @@ export function DataTable<T>({
               key={rowKey(row)}
               hover={!!onRowClick}
               onClick={() => onRowClick?.(row)}
-              sx={{ cursor: onRowClick ? 'pointer' : 'default' }}
+              sx={{
+                cursor: onRowClick ? 'pointer' : 'default',
+                '&:nth-of-type(even)': { bgcolor: '#2f3137' },
+                '&:hover': { bgcolor: 'rgba(230,57,70,0.1) !important' },
+              }}
             >
               {columns.map((col) => (
                 <TableCell key={col.key} align={col.align}>

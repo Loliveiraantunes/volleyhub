@@ -34,14 +34,14 @@ function SummaryCard({ icon, label, value, color }: Readonly<{ icon: React.React
       variant="outlined"
       sx={{
         height: '100%',
-        borderTop: `3px solid ${color}`,
+        borderTop: '3px solid #5a5e67',
         transition: 'transform 0.2s, box-shadow 0.2s',
         '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.1)' },
       }}
     >
       <CardContent sx={{ height: '100%', boxSizing: 'border-box' }}>
         <Stack direction="row" spacing={2} alignItems="center">
-          <Box sx={{ bgcolor: color, color: '#fff', borderRadius: 2, p: 1, display: 'flex' }}>{icon}</Box>
+          <Box sx={{ bgcolor: '#3f4248', color: '#d0d3da', borderRadius: 1, p: 1, display: 'flex' }}>{icon}</Box>
           <Box>
             <Typography variant="h5" fontWeight={800}>
               {value}

@@ -15,5 +15,20 @@ export const matchService = {
 
 export const publicMatchService = {
   findBySlugAndId: (slug: string, matchId: number) =>
-    api.get<MatchDetailResponse>(`/api/public/events/${slug}/matches/${matchId}`).then((r) => r.data),
+    api.get<MatchDetailResponse>(`/api/public/events/${slug}/matches/${matchId}`).then((r) => {
+      const match = r.data;
+      const homeSetsWon = match.homeSetsWon ?? match.sets.filter((set) => set.homePoints > set.awayPoints).length;
+      const awaySetsWon = match.awaySetsWon ?? match.sets.filter((set) => set.awayPoints > set.homePoints).length;
+      let winnerTeamId = match.winnerTeamId ?? null;
+      if (winnerTeamId === null && homeSetsWon !== awaySetsWon) {
+        winnerTeamId = homeSetsWon > awaySetsWon ? match.homeTeam.teamId : match.awayTeam.teamId;
+      }
+
+      return {
+        ...match,
+        homeSetsWon,
+        awaySetsWon,
+        winnerTeamId,
+      };
+    }),
 };

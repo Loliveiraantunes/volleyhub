@@ -41,7 +41,7 @@ export function StandingsTable({ standings }: Readonly<StandingsTableProps>) {
       <TableContainer sx={{ overflowX: 'auto' }}>
         <Table size="medium" sx={{ minWidth: 580 }}>
           <TableHead>
-            <TableRow sx={{ bgcolor: 'grey.50' }}>
+            <TableRow sx={{ bgcolor: '#2f3137' }}>
               <TableCell width={64} sx={{ fontWeight: 800 }}>#</TableCell>
               <TableCell sx={{ fontWeight: 800 }}>Equipe</TableCell>
               <TableCell align="center" sx={{ fontWeight: 800 }}>Vitórias</TableCell>
@@ -51,7 +51,7 @@ export function StandingsTable({ standings }: Readonly<StandingsTableProps>) {
           </TableHead>
           <TableBody>
             {standings.entries.map((entry) => (
-              <TableRow key={entry.teamId} hover sx={{ '&:nth-of-type(even)': { bgcolor: 'grey.50' } }}>
+              <TableRow key={entry.teamId} hover sx={{ '&:nth-of-type(even)': { bgcolor: '#2f3137' } }}>
                 <TableCell>
                   <Typography fontWeight={800} color={entry.position <= 3 ? 'primary.main' : 'text.primary'}>
                     {entry.position}

@@ -31,7 +31,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSelectedEvent } from '../contexts/SelectedEventContext';
 
-const DRAWER_WIDTH = 260;
+const DRAWER_WIDTH = 190;
 
 export function AdminLayout() {
   const theme = useTheme();
@@ -45,6 +45,14 @@ export function AdminLayout() {
 
   const eventId = selectedEvent?.id;
 
+  const isNavItemSelected = (to: string) => {
+    if (to === '/admin') return location.pathname === '/admin';
+    if (to === '/admin/events') {
+      return location.pathname === to || location.pathname === '/admin/events/new' || /^\/admin\/events\/[^/]+\/edit$/.test(location.pathname);
+    }
+    return location.pathname === to || location.pathname.startsWith(`${to}/`);
+  };
+
   const navItems = [
     { label: 'Dashboard', icon: <DashboardIcon />, to: '/admin' },
     { label: 'Eventos', icon: <EventIcon />, to: '/admin/events' },
@@ -56,9 +64,9 @@ export function AdminLayout() {
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar>
-        <Typography variant="h6" fontWeight={800} color="primary">
-          Volleyhub
+      <Toolbar sx={{ minHeight: 62, px: 1.5, bgcolor: '#17181c', color: 'white' }}>
+        <Typography variant="subtitle1" fontWeight={900} sx={{ letterSpacing: 0.9 }}>
+          VOLLEY<span style={{ color: '#e63946' }}>HUB</span>
         </Typography>
       </Toolbar>
       <Divider />
@@ -73,13 +81,26 @@ export function AdminLayout() {
               <ListItemButton
                 component={Link}
                 to={item.to}
-                selected={location.pathname.startsWith(item.to.split('/').slice(0, 3).join('/')) && item.to !== '/admin/events'}
+                selected={isNavItemSelected(item.to)}
                 disabled={item.disabled}
                 onClick={() => setMobileOpen(false)}
-                sx={{ mx: 1, borderRadius: 2 }}
+                sx={{
+                  mx: 0.75,
+                  borderRadius: 1,
+                  color: 'grey.300',
+                  '& .MuiListItemIcon-root': { color: 'grey.500' },
+                  '& .MuiListItemIcon-root svg': { fontSize: 20 },
+                  '&:hover': { bgcolor: 'rgba(230,57,70,0.12)', color: 'white' },
+                  '&.Mui-selected': {
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    '& .MuiListItemIcon-root': { color: 'white' },
+                    '&:hover': { bgcolor: 'primary.dark' },
+                  },
+                }}
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} />
+                <ListItemText primary={item.label} sx={{ '& .MuiListItemText-primary': { fontSize: 13, fontWeight: 700 } }} />
               </ListItemButton>
             </span>
           </Tooltip>
@@ -92,9 +113,9 @@ export function AdminLayout() {
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <AppBar
         position="fixed"
-        color="inherit"
+        color="transparent"
         elevation={0}
-        sx={{ borderBottom: '1px solid', borderColor: 'divider', zIndex: theme.zIndex.drawer + 1 }}
+        sx={{ bgcolor: '#202126', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider', zIndex: theme.zIndex.drawer + 1 }}
       >
         <Toolbar sx={{ gap: 2 }}>
           {isMobile && (
@@ -103,7 +124,7 @@ export function AdminLayout() {
             </IconButton>
           )}
           <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2" color="text.secondary">
+            <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
               Evento selecionado
             </Typography>
             <Typography variant="body1" fontWeight={700}>
@@ -115,7 +136,7 @@ export function AdminLayout() {
               {adminEmail}
             </Typography>
             <IconButton onClick={(e) => setUserMenuAnchor(e.currentTarget)}>
-              <Avatar sx={{ width: 32, height: 32 }}>{adminEmail?.[0]?.toUpperCase() ?? 'A'}</Avatar>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>{adminEmail?.[0]?.toUpperCase() ?? 'A'}</Avatar>
             </IconButton>
             <Menu anchorEl={userMenuAnchor} open={!!userMenuAnchor} onClose={() => setUserMenuAnchor(null)}>
               <MenuItem
@@ -141,16 +162,16 @@ export function AdminLayout() {
           onClose={() => setMobileOpen(false)}
           ModalProps={{ keepMounted: true }}
           sx={{
-            '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+            '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box', bgcolor: '#202126', borderRight: 'none' },
           }}
         >
           {drawerContent}
         </Drawer>
       </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` } }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, bgcolor: 'background.default', minHeight: '100vh', overflowX: 'hidden' }}>
         <Toolbar />
-        <Box sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
           <Outlet />
         </Box>
       </Box>

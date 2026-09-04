@@ -138,7 +138,7 @@ export function MatchSummaryPage() {
             sx={{
               px: 3,
               py: 1.25,
-              bgcolor: 'rgba(21,101,192,0.04)',
+              bgcolor: 'rgba(0,0,0,0.14)',
               borderBottom: '1px solid',
               borderColor: 'divider',
               display: 'flex',
@@ -219,11 +219,14 @@ export function MatchSummaryPage() {
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 3 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2.5 }}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            Sets ({sets.length})
-          </Typography>
-          <Button size="small" startIcon={<AddIcon />} onClick={addSet}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={1.5} sx={{ mb: 2.5 }}>
+          <Box>
+            <Typography variant="h6" fontWeight={800}>Pontuação por set</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Registre os pontos de cada equipe em cada set.
+            </Typography>
+          </Box>
+          <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={addSet} sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}>
             Adicionar set
           </Button>
         </Stack>
@@ -240,11 +243,11 @@ export function MatchSummaryPage() {
             }}
           >
             <div />
-            <Typography variant="caption" fontWeight={700} color="text.secondary" textAlign="center" noWrap>
+              <Typography variant="caption" fontWeight={800} color="text.primary" textAlign="center" noWrap sx={{ display: { xs: 'none', sm: 'block' } }}>
               {homeTeam.name}
             </Typography>
             <div />
-            <Typography variant="caption" fontWeight={700} color="text.secondary" textAlign="center" noWrap>
+              <Typography variant="caption" fontWeight={800} color="text.primary" textAlign="center" noWrap sx={{ display: { xs: 'none', sm: 'block' } }}>
               {awayTeam.name}
             </Typography>
             <div />
@@ -260,26 +263,41 @@ export function MatchSummaryPage() {
                 key={set.setNumber}
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: '56px 1fr auto 1fr 40px',
+                  gridTemplateColumns: { xs: '48px minmax(0, 1fr) auto minmax(0, 1fr) 36px', sm: '56px 1fr auto 1fr 40px' },
                   alignItems: 'center',
                   gap: 1,
                   px: 1,
                   py: 0.75,
-                  borderRadius: 1.5,
+                  borderRadius: 1,
                   border: '1px solid',
-                  borderColor: 'divider',
-                  bgcolor: 'background.default',
+                  borderColor: homeWon || awayWon ? 'rgba(230,57,70,0.38)' : 'divider',
+                  bgcolor: 'rgba(0,0,0,0.12)',
+                  '&:focus-within': { borderColor: 'primary.main', boxShadow: '0 0 0 2px rgba(230,57,70,0.14)' },
                 }}
               >
-                <Typography variant="caption" fontWeight={700} color="text.secondary">
+                <Typography
+                  variant="caption"
+                  fontWeight={800}
+                  sx={{
+                    color: 'text.primary',
+                    bgcolor: 'rgba(230,57,70,0.14)',
+                    border: '1px solid rgba(230,57,70,0.45)',
+                    borderRadius: 1,
+                    px: 0.75,
+                    py: 0.5,
+                    textAlign: 'center',
+                  }}
+                >
                   Set {set.setNumber}
                 </Typography>
                 <TextField
                   type="number"
                   size="small"
+                  label={homeTeam.name}
                   value={set.homePoints}
                   onChange={(e) => updateSet(index, 'homePoints', Number(e.target.value))}
                   slotProps={{
+                    inputLabel: { sx: { display: { xs: 'block', sm: 'none' } } },
                     htmlInput: {
                       min: 0,
                       style: { textAlign: 'center', fontWeight: homeWon ? 800 : 400 },
@@ -292,9 +310,11 @@ export function MatchSummaryPage() {
                 <TextField
                   type="number"
                   size="small"
+                  label={awayTeam.name}
                   value={set.awayPoints}
                   onChange={(e) => updateSet(index, 'awayPoints', Number(e.target.value))}
                   slotProps={{
+                    inputLabel: { sx: { display: { xs: 'block', sm: 'none' } } },
                     htmlInput: {
                       min: 0,
                       style: { textAlign: 'center', fontWeight: awayWon ? 800 : 400 },
@@ -315,18 +335,23 @@ export function MatchSummaryPage() {
           </Typography>
         )}
 
-        <Stack direction="row" justifyContent="flex-end" spacing={2} sx={{ mt: 4 }}>
-          <Button variant="outlined" onClick={saveProgress} disabled={saving}>
+        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={2} sx={{ mt: 4 }}>
+          <Typography variant="caption" color={hasUnsavedSetChanges ? 'primary.light' : 'text.secondary'} fontWeight={700}>
+            {hasUnsavedSetChanges ? 'Há alterações de sets não salvas.' : 'Todos os sets estão salvos.'}
+          </Typography>
+          <Stack direction="row" justifyContent="flex-end" spacing={1}>
+          <Button variant="outlined" onClick={saveProgress} disabled={saving || !hasUnsavedSetChanges}>
             Salvar
           </Button>
           <Button
             variant="contained"
-            color="success"
+            color="primary"
             onClick={() => setConfirmOpen(true)}
             disabled={saving || sets.length === 0 || hasUnsavedSetChanges}
           >
             Finalizar súmula
           </Button>
+          </Stack>
         </Stack>
       </Paper>
 

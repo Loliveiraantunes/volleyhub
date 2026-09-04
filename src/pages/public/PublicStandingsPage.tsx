@@ -13,10 +13,10 @@ import type { Event, GroupStandings } from '../../types/api';
 
 function MetricCard({ icon, label, value, color }: Readonly<{ icon: React.ReactNode; label: string; value: number; color: string }>) {
   return (
-    <Card variant="outlined" sx={{ height: '100%', borderTop: `3px solid ${color}` }}>
+    <Card variant="outlined" sx={{ height: '100%', borderTop: '3px solid #5a5e67' }}>
       <CardContent>
         <Stack direction="row" spacing={1.5} alignItems="center">
-          <Box sx={{ display: 'flex', p: 1, borderRadius: 2, bgcolor: color, color: 'white' }}>{icon}</Box>
+          <Box sx={{ display: 'flex', p: 1, borderRadius: 1, bgcolor: '#3f4248', color: '#d0d3da' }}>{icon}</Box>
           <Box>
             <Typography variant="h5" fontWeight={800}>{value}</Typography>
             <Typography variant="body2" color="text.secondary">{label}</Typography>
@@ -46,7 +46,7 @@ function Podium({ standings }: Readonly<{ standings: GroupStandings[] }>) {
   ];
 
   return (
-    <Card variant="outlined" sx={{ mb: 4, overflow: 'hidden', background: 'linear-gradient(135deg, #fff 0%, #f4f7fb 100%)' }}>
+    <Card variant="outlined" sx={{ mb: 4, overflow: 'hidden', background: 'linear-gradient(135deg, #464950 0%, #3f4248 100%)' }}>
       <CardContent sx={{ p: { xs: 2, md: 3 } }}>
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
           <EmojiEventsIcon color="warning" />
@@ -67,7 +67,7 @@ function Podium({ standings }: Readonly<{ standings: GroupStandings[] }>) {
                 <Typography variant="caption" color="text.secondary" textAlign="center">
                   {entry.points} pts · {entry.wins ?? 0} vitórias · {entry.setsWon ?? 0} sets ganhos
                 </Typography>
-                <Box sx={{ width: '100%', height: medal.height, bgcolor: medal.color, color: 'white', display: 'flex', justifyContent: 'center', pt: 1.5, borderRadius: '8px 8px 0 0' }}>
+                <Box sx={{ width: '100%', height: medal.height, bgcolor: '#3f4248', color: medal.color, display: 'flex', justifyContent: 'center', pt: 1.5, border: `1px solid ${medal.color}`, borderBottom: 0, borderRadius: '3px 3px 0 0' }}>
                   <Typography fontWeight={900}>{medal.label}</Typography>
                 </Box>
               </Stack>

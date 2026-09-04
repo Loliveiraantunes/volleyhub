@@ -37,14 +37,7 @@ import { groupService } from '../../services/groupService';
 import { matchService } from '../../services/matchService';
 import { teamService } from '../../services/teamService';
 import type { GroupStage, Match, Team } from '../../types/api';
-import { formatDateTime } from '../../utils/format';
-
-const STAGE_LABELS = {
-  GROUP_STAGE: 'Group Stage',
-  QUARTERFINALS: 'Quarterfinals',
-  SEMIFINALS: 'Semifinals',
-  FINAL: 'Final',
-} as const;
+import { formatDateTime, matchStageLabels } from '../../utils/format';
 
 export function GroupsPage() {
   const { eventId } = useParams();
@@ -446,7 +439,7 @@ export function GroupsPage() {
         <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
           Confrontos
         </Typography>
-        <Tabs value={matchTab} onChange={(_, value: 'OPEN' | 'FINISHED') => setMatchTab(value)} sx={{ mb: 2 }}>
+        <Tabs value={matchTab} onChange={(_, value: 'OPEN' | 'FINISHED') => setMatchTab(value)} variant="scrollable" scrollButtons={false} sx={{ mb: 2 }}>
           <Tab value="OPEN" label={`Não finalizados (${matches.filter((match) => match.status !== 'FINISHED').length})`} />
           <Tab value="FINISHED" label={`Finalizados (${matches.filter((match) => match.status === 'FINISHED').length})`} />
         </Tabs>
@@ -502,7 +495,7 @@ export function GroupsPage() {
                           sx={{
                             display: 'grid',
                             gridTemplateColumns: {
-                              xs: '92px minmax(96px, 1fr) 68px minmax(96px, 1fr) 88px',
+                              xs: 'minmax(0, 1fr) 64px minmax(0, 1fr)',
                               md: '110px minmax(150px, 1fr) 68px minmax(150px, 1fr) 120px 108px',
                             },
                             alignItems: 'center',
@@ -521,17 +514,17 @@ export function GroupsPage() {
                             },
                           }}
                         >
-                          <Stack spacing={0.25} alignItems="center" sx={{ flexShrink: 0, minWidth: 92 }}>
+                          <Stack spacing={0.25} alignItems="center" sx={{ minWidth: 0, gridColumn: { xs: '1 / -1', md: 'auto' }, justifySelf: { xs: 'center', md: 'auto' } }}>
                             <StatusBadge status={match.status} />
                             <Typography variant="caption" color="text.secondary" noWrap>
-                              {STAGE_LABELS[match.stage ?? 'GROUP_STAGE']}
+                              {matchStageLabels[match.stage ?? 'GROUP_STAGE'] ?? match.stage ?? 'Fase de Grupos'}
                             </Typography>
                           </Stack>
 
                           <Stack
                             alignItems="center"
                             spacing={0.5}
-                            sx={{ width: { xs: '100%', md: 180 }, maxWidth: '100%', minWidth: 0, justifySelf: 'end' }}
+                            sx={{ width: { xs: '100%', md: 180 }, maxWidth: '100%', minWidth: 0, justifySelf: { xs: 'stretch', md: 'end' }, gridColumn: { xs: '1', md: 'auto' } }}
                           >
                             <Avatar src={homeTeam?.logo ?? undefined} variant="rounded" sx={{ width: 44, height: 44, flexShrink: 0 }} />
                             <Typography noWrap fontWeight={800} variant="body1" textAlign="center" sx={{ maxWidth: '100%' }}>
@@ -539,7 +532,7 @@ export function GroupsPage() {
                             </Typography>
                           </Stack>
 
-                          <Box sx={{ flexShrink: 0, textAlign: 'center', minWidth: 68 }}>
+                          <Box sx={{ flexShrink: 0, textAlign: 'center', minWidth: 0, alignSelf: 'center', gridColumn: { xs: '2', md: 'auto' } }}>
                             <Typography variant="h6" fontWeight={900} lineHeight={1}>
                               {match.homeSetsWon}
                               <Typography component="span" color="text.disabled" sx={{ mx: 0.5, fontWeight: 400 }}>×</Typography>
@@ -550,7 +543,7 @@ export function GroupsPage() {
                           <Stack
                             alignItems="center"
                             spacing={0.5}
-                            sx={{ width: { xs: '100%', md: 180 }, maxWidth: '100%', minWidth: 0, justifySelf: 'start' }}
+                            sx={{ width: { xs: '100%', md: 180 }, maxWidth: '100%', minWidth: 0, justifySelf: { xs: 'stretch', md: 'start' }, gridColumn: { xs: '3', md: 'auto' } }}
                           >
                             <Avatar src={awayTeam?.logo ?? undefined} variant="rounded" sx={{ width: 44, height: 44, flexShrink: 0 }} />
                             <Typography noWrap fontWeight={800} variant="body1" textAlign="center" sx={{ maxWidth: '100%' }}>
@@ -571,7 +564,7 @@ export function GroupsPage() {
                               )}
                           </Stack>
 
-                          <Stack direction="row" spacing={0.25} sx={{ width: 108, justifyContent: 'flex-end' }}>
+                          <Stack direction="row" spacing={0.25} sx={{ width: { xs: '100%', md: 108 }, justifyContent: 'flex-end', gridColumn: { xs: '1 / -1', md: 'auto' } }}>
                             <IconButton size="small" color="info" title="Súmula" onClick={() => openSummary(match)}>
                               <AssignmentIcon fontSize="small" />
                             </IconButton>

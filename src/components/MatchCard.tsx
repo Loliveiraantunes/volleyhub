@@ -1,11 +1,10 @@
-import { alpha } from '@mui/material/styles';
 import { Avatar, Card, CardContent, Divider, IconButton, Stack, Typography } from '@mui/material';
 import PlaceIcon from '@mui/icons-material/Place';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import EditIcon from '@mui/icons-material/Edit';
 import type { Match } from '../types/api';
 import { StatusBadge } from './StatusBadge';
-import { formatDateTime } from '../utils/format';
+import { formatDateTime, matchStageLabels } from '../utils/format';
 
 interface MatchCardProps {
   match: Match;
@@ -16,13 +15,6 @@ interface MatchCardProps {
   onClick?: () => void;
   onEdit?: () => void;
 }
-
-const STAGE_LABELS = {
-  GROUP_STAGE: 'Group Stage',
-  QUARTERFINALS: 'Quarterfinals',
-  SEMIFINALS: 'Semifinals',
-  FINAL: 'Final',
-} as const;
 
 export function MatchCard({
   match,
@@ -43,7 +35,7 @@ export function MatchCard({
         transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.2s',
         '&:hover': onClick ? {
           borderColor: 'primary.main',
-          boxShadow: `0 8px 24px ${alpha('#1565c0', 0.14)}`,
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
           transform: 'translateY(-2px)',
         } : undefined,
       }}
@@ -53,7 +45,7 @@ export function MatchCard({
           <Stack spacing={0.5}>
             <StatusBadge status={match.status} />
             <Typography variant="caption" color="text.secondary" fontWeight={700}>
-              {STAGE_LABELS[match.stage ?? 'GROUP_STAGE']}
+              {matchStageLabels[match.stage ?? 'GROUP_STAGE'] ?? match.stage ?? 'Fase de Grupos'}
             </Typography>
           </Stack>
         </Stack>
