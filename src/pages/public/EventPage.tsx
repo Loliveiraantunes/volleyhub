@@ -10,6 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 import { Loading } from '../../components/Loading';
 import { EmptyState } from '../../components/EmptyState';
 import { TeamCard } from '../../components/TeamCard';
@@ -40,6 +41,10 @@ export function EventPage() {
 
   if (loading) return <Loading />;
   if (!event) return <EmptyState title="Evento não encontrado" />;
+
+  const registrationIsOpen = event.registrationOpen && (
+    !event.registrationEndAt || dayjs().isBefore(dayjs(event.registrationEndAt))
+  );
 
   return (
     <Box>
@@ -74,10 +79,10 @@ export function EventPage() {
               sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 700 }}
             />
             <Chip
-              label={event.registrationOpen ? 'Inscrições abertas' : 'Inscrições fechadas'}
+              label={registrationIsOpen ? 'Inscrições abertas' : 'Inscrições fechadas'}
               size="small"
-              color={event.registrationOpen ? 'success' : undefined}
-              sx={!event.registrationOpen ? { bgcolor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)' } : {}}
+              color={registrationIsOpen ? 'success' : undefined}
+              sx={!registrationIsOpen ? { bgcolor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)' } : {}}
             />
           </Stack>
           <Typography
@@ -99,11 +104,15 @@ export function EventPage() {
       <Box sx={{ bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider', py: 1.75 }}>
         <Container maxWidth="md">
           <Stack direction="row" spacing={1.5} flexWrap="wrap">
-            {event.registrationOpen && (
-              <Button variant="contained" onClick={() => navigate(`/event/${slug}/inscricao`)}>
+            <span title={registrationIsOpen ? undefined : 'Inscrições encerradas'}>
+              <Button
+                variant="contained"
+                disabled={!registrationIsOpen}
+                onClick={() => navigate(`/event/${slug}/inscricao`)}
+              >
                 Inscrever equipe
               </Button>
-            )}
+            </span>
             <Button variant="outlined" onClick={() => navigate(`/event/${slug}/chave`)}>
               Chave / grupos
             </Button>

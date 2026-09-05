@@ -555,14 +555,29 @@ function GroupBracket({ group, onMatchClick }: Readonly<GroupBracketProps>) {
               <Stack direction="row" sx={{ mb: 2, minWidth: totalW }}>
                 {rounds.map((round, ri) => (
                   <Box key={round.title} sx={{ width: COL_W, mr: `${ri < rounds.length - 1 ? COL_GAP : 0}px` }}>
-                    <Box sx={{ bgcolor: 'rgba(21,101,192,0.08)', borderRadius: 0.75, px: 1.25, py: 0.5, textAlign: 'center' }}>
+                    <Box
+                      sx={{
+                        minHeight: 34,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'rgba(230,57,70,0.14)',
+                        border: '1px solid rgba(230,57,70,0.4)',
+                        borderRadius: 1,
+                        px: 1.5,
+                        py: 0.6,
+                        textAlign: 'center',
+                        boxShadow: '0 6px 16px rgba(0, 0, 0, 0.18)',
+                      }}
+                    >
                       <Typography
                         sx={{
-                          color: 'primary.main',
-                          fontSize: 10,
-                          fontWeight: 800,
+                          color: '#ffecef',
+                          fontSize: 11,
+                          fontWeight: 900,
                           textTransform: 'uppercase',
-                          letterSpacing: 1,
+                          letterSpacing: 1.2,
+                          lineHeight: 1.1,
                         }}
                       >
                         {formatStageLabel(round.title)}

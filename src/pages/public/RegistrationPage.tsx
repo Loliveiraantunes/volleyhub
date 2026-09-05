@@ -35,7 +35,7 @@ import type {
   RegistrationPlayerRequest,
   RegistrationTechnicalStaffRequest,
 } from '../../types/api';
-import { formatCurrency, staffRoleLabels } from '../../utils/format';
+import { formatCurrency, formatDate, staffRoleLabels } from '../../utils/format';
 
 const STEPS = ['Equipe', 'Jogadores', 'Comissão Técnica', 'Pagamento', 'WhatsApp'];
 const MAX_PLAYERS = 14;
@@ -169,7 +169,7 @@ export function RegistrationPage() {
             <List dense>
               {players.map((p, index) => (
                 <ListItem
-                  key={index}
+                  key={`${p.fullName}-${p.cpf ?? ''}-${p.birthDate ?? ''}`}
                   disableGutters
                   secondaryAction={
                     <IconButton edge="end" color="error" onClick={() => setPlayers((prev) => prev.filter((_, i) => i !== index))}>
@@ -180,7 +180,10 @@ export function RegistrationPage() {
                   <ListItemAvatar>
                     <Avatar>{p.fullName[0]}</Avatar>
                   </ListItemAvatar>
-                  <ListItemText primary={p.fullName} secondary={p.cpf} />
+                  <ListItemText
+                    primary={p.fullName}
+                    secondary={`CPF: ${p.cpf || '-'} • Nascimento: ${formatDate(p.birthDate)}`}
+                  />
                 </ListItem>
               ))}
             </List>
@@ -214,7 +217,7 @@ export function RegistrationPage() {
             <List dense>
               {staff.map((s, index) => (
                 <ListItem
-                  key={index}
+                  key={`${s.fullName}-${s.role}`}
                   disableGutters
                   secondaryAction={
                     <IconButton edge="end" color="error" onClick={() => setStaff((prev) => prev.filter((_, i) => i !== index))}>
