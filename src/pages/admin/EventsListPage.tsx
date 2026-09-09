@@ -84,8 +84,8 @@ export function EventsListPage() {
         {events.map((event) => {
           const currentCategory = category(event.categoryId);
           return (
-            <Box key={event.id} sx={{ minWidth: 0 }}>
-              <Stack sx={{ position: 'relative' }}>
+            <Box key={event.id} sx={{ minWidth: 0, height: '100%' }}>
+              <Stack sx={{ position: 'relative', height: '100%' }}>
                 <IconButton
                   size="small"
                   sx={{ position: 'absolute', top: 4, right: 4, zIndex: 1, bgcolor: 'background.paper' }}

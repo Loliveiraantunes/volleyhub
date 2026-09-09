@@ -270,9 +270,9 @@ export function MatchSummaryPage() {
                   py: 0.75,
                   borderRadius: 1,
                   border: '1px solid',
-                  borderColor: homeWon || awayWon ? 'rgba(230,57,70,0.38)' : 'divider',
+                  borderColor: homeWon || awayWon ? 'rgba(255,0,46,0.38)' : 'divider',
                   bgcolor: 'rgba(0,0,0,0.12)',
-                  '&:focus-within': { borderColor: 'primary.main', boxShadow: '0 0 0 2px rgba(230,57,70,0.14)' },
+                  '&:focus-within': { borderColor: 'primary.main', boxShadow: '0 0 0 2px rgba(255,0,46,0.14)' },
                 }}
               >
                 <Typography
@@ -280,8 +280,8 @@ export function MatchSummaryPage() {
                   fontWeight={800}
                   sx={{
                     color: 'text.primary',
-                    bgcolor: 'rgba(230,57,70,0.14)',
-                    border: '1px solid rgba(230,57,70,0.45)',
+                    bgcolor: 'rgba(255,0,46,0.14)',
+                    border: '1px solid rgba(255,0,46,0.45)',
                     borderRadius: 1,
                     px: 0.75,
                     py: 0.5,

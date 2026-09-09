@@ -1,4 +1,4 @@
-import { Card, CardActionArea, CardContent, CardMedia, Chip, Link, Stack, Typography } from '@mui/material';
+import { Box, Card, CardActionArea, CardContent, CardMedia, Chip, Link, Stack, Typography } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import type { Event } from '../types/api';
 import { formatDate, genderLabels } from '../utils/format';
@@ -24,7 +24,15 @@ export function EventCard({ event, categoryName, categoryMinimumAgeEnabled, cate
           backgroundPosition: 'center',
         }}
       />
-      <CardContent sx={{ p: { xs: 1.75, sm: 2.25 }, '&:last-child': { pb: { xs: 1.75, sm: 2.25 } } }}>
+      <CardContent
+        sx={{
+          p: { xs: 1.75, sm: 2.25 },
+          '&:last-child': { pb: { xs: 1.75, sm: 2.25 } },
+          display: 'flex',
+          flexDirection: 'column',
+          flexGrow: 1,
+        }}
+      >
         <Typography variant="subtitle1" fontWeight={800} sx={{ overflowWrap: 'anywhere' }}>
           {event.name}
         </Typography>
@@ -38,8 +46,8 @@ export function EventCard({ event, categoryName, categoryMinimumAgeEnabled, cate
             label={event.registrationOpen ? 'Inscrições abertas' : 'Inscrições fechadas'}
             size="small"
             sx={event.registrationOpen
-              ? { bgcolor: 'rgba(230,57,70,0.18)', color: '#ff8b93', border: '1px solid #e63946' }
-              : { bgcolor: '#3f4248', color: 'text.secondary', border: '1px solid #69717d' }}
+              ? { bgcolor: 'rgba(255,0,46,0.18)', color: '#ff8b93', border: '1px solid #ff002e' }
+              : { bgcolor: '#ff002e', color: 'white', border: '1px solid #cc001e', fontWeight: 700 }}
           />
         </Stack>
         <Typography variant="body2" color="text.primary" sx={{ overflowWrap: 'anywhere' }}>
@@ -50,7 +58,7 @@ export function EventCard({ event, categoryName, categoryMinimumAgeEnabled, cate
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          sx={{ mt: 1.25, display: 'inline-flex', alignItems: 'center', gap: 0.5, color: 'primary.light', maxWidth: '100%' }}
+          sx={{ mt: 'auto', pt: 1.25, display: 'inline-flex', alignItems: 'center', gap: 0.5, color: 'primary.main', maxWidth: '100%' }}
           variant="body2"
         >
           <OpenInNewIcon fontSize="inherit" />
@@ -61,8 +69,14 @@ export function EventCard({ event, categoryName, categoryMinimumAgeEnabled, cate
   );
 
   return (
-    <Card variant="outlined">
-      {onClick ? <CardActionArea onClick={onClick}>{content}</CardActionArea> : content}
+    <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {onClick ? (
+        <CardActionArea onClick={onClick} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+          {content}
+        </CardActionArea>
+      ) : (
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>{content}</Box>
+      )}
     </Card>
   );
 }

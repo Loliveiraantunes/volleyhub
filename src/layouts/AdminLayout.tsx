@@ -38,7 +38,7 @@ export function AdminLayout() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(null);
-  const { adminEmail, logout } = useAuth();
+  const { adminEmail, adminName, logout } = useAuth();
   const { selectedEvent } = useSelectedEvent();
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,13 +64,13 @@ export function AdminLayout() {
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar sx={{ minHeight: 62, px: 1.5, bgcolor: '#17181c', color: 'white' }}>
+      <Toolbar sx={{ minHeight: 62, px: 1.5, background: 'linear-gradient(135deg, #1a1d22 0%, #17181c 100%)', color: 'white', borderBottom: '2px solid #ff002e', boxShadow: '0 4px 12px rgba(255, 0, 46, 0.15)' }}>
         <Typography variant="subtitle1" fontWeight={900} sx={{ letterSpacing: 0.9 }}>
-          VOLLEY<span style={{ color: '#e63946' }}>HUB</span>
+          VOLLEY<span style={{ color: '#ff3349' }}>HUB</span>
         </Typography>
       </Toolbar>
-      <Divider />
-      <List sx={{ flex: 1, py: 1 }}>
+      <Divider sx={{ borderColor: 'rgba(255, 0, 46, 0.2)' }} />
+      <List sx={{ flex: 1, py: 1, px: 0.5 }}>
         {navItems.map((item) => (
           <Tooltip
             key={item.label}
@@ -86,16 +86,27 @@ export function AdminLayout() {
                 onClick={() => setMobileOpen(false)}
                 sx={{
                   mx: 0.75,
-                  borderRadius: 1,
+                  borderRadius: 1.5,
                   color: 'grey.300',
-                  '& .MuiListItemIcon-root': { color: 'grey.500' },
+                  transition: 'all 0.3s ease',
+                  '& .MuiListItemIcon-root': { color: 'grey.400', transition: 'color 0.3s ease' },
                   '& .MuiListItemIcon-root svg': { fontSize: 20 },
-                  '&:hover': { bgcolor: 'rgba(230,57,70,0.12)', color: 'white' },
+                  '&:hover': {
+                    bgcolor: 'rgba(255,0,46,0.15)',
+                    color: '#ff3349',
+                    transform: 'translateX(4px)',
+                    '& .MuiListItemIcon-root': { color: '#ff3349' },
+                  },
                   '&.Mui-selected': {
-                    bgcolor: 'primary.main',
+                    background: 'linear-gradient(135deg, rgba(255, 0, 46, 0.9) 0%, rgba(204, 0, 30, 0.8) 100%)',
                     color: 'white',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 12px rgba(255, 0, 46, 0.3)',
                     '& .MuiListItemIcon-root': { color: 'white' },
-                    '&:hover': { bgcolor: 'primary.dark' },
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #ff3349 0%, #ff002e 100%)',
+                      transform: 'translateX(4px)',
+                    },
                   },
                 }}
               >
@@ -132,11 +143,18 @@ export function AdminLayout() {
             </Typography>
           </Box>
           <Stack direction="row" spacing={1} alignItems="center">
-            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
-              {adminEmail}
-            </Typography>
+            <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'right' }}>
+              <Typography variant="body2" fontWeight={700}>
+                {adminName ?? adminEmail}
+              </Typography>
+              {adminName && (
+                <Typography variant="caption" color="text.secondary">
+                  {adminEmail}
+                </Typography>
+              )}
+            </Box>
             <IconButton onClick={(e) => setUserMenuAnchor(e.currentTarget)}>
-              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>{adminEmail?.[0]?.toUpperCase() ?? 'A'}</Avatar>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>{(adminName ?? adminEmail)?.[0]?.toUpperCase() ?? 'A'}</Avatar>
             </IconButton>
             <Menu anchorEl={userMenuAnchor} open={!!userMenuAnchor} onClose={() => setUserMenuAnchor(null)}>
               <MenuItem
@@ -162,7 +180,14 @@ export function AdminLayout() {
           onClose={() => setMobileOpen(false)}
           ModalProps={{ keepMounted: true }}
           sx={{
-            '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box', bgcolor: '#202126', borderRight: 'none' },
+            '& .MuiDrawer-paper': {
+              width: DRAWER_WIDTH,
+              boxSizing: 'border-box',
+              background: 'linear-gradient(180deg, #1a1d22 0%, #202126 50%, #1a1d22 100%)',
+              borderRight: '2px solid rgba(255, 0, 46, 0.2)',
+              boxShadow: '4px 0 16px rgba(255, 0, 46, 0.1)',
+              backdropFilter: 'blur(10px)',
+            },
           }}
         >
           {drawerContent}

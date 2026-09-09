@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -10,16 +11,20 @@ import {
   Typography,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
-import dayjs from 'dayjs';
 import { Loading } from '../../components/Loading';
 import { EmptyState } from '../../components/EmptyState';
 import { TeamCard } from '../../components/TeamCard';
 import { publicEventService } from '../../services/eventService';
 import { publicTeamService } from '../../services/teamService';
 import type { Event, Team } from '../../types/api';
-import { formatDate, genderLabels } from '../../utils/format';
+import { formatDate, genderLabels, isRegistrationOpen } from '../../utils/format';
 
 type TabKey = 'info' | 'regulation' | 'guide' | 'teams';
+
+const richTextSx = {
+  '& a': { color: 'primary.light' },
+  '& a:visited': { color: 'primary.light' },
+};
 
 export function EventPage() {
   const { slug } = useParams();
@@ -42,9 +47,7 @@ export function EventPage() {
   if (loading) return <Loading />;
   if (!event) return <EmptyState title="Evento não encontrado" />;
 
-  const registrationIsOpen = event.registrationOpen && (
-    !event.registrationEndAt || dayjs().isBefore(dayjs(event.registrationEndAt))
-  );
+  const registrationIsOpen = isRegistrationOpen(event);
 
   return (
     <Box>
@@ -103,6 +106,11 @@ export function EventPage() {
       {/* Action strip */}
       <Box sx={{ bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider', py: 1.75 }}>
         <Container maxWidth="md">
+          {!registrationIsOpen && (
+            <Alert severity="error" sx={{ mb: 1.5 }}>
+              As inscrições para este evento foram encerradas.
+            </Alert>
+          )}
           <Stack direction="row" spacing={1.5} flexWrap="wrap">
             <span title={registrationIsOpen ? undefined : 'Inscrições encerradas'}>
               <Button
@@ -133,19 +141,19 @@ export function EventPage() {
         </Tabs>
 
         {tab === 'info' && (
-          <Box dangerouslySetInnerHTML={{ __html: event.description || '<p>Sem informações cadastradas.</p>' }} />
+          <Box sx={richTextSx} dangerouslySetInnerHTML={{ __html: event.description || '<p>Sem informações cadastradas.</p>' }} />
         )}
         {tab === 'regulation' && (
-          <Box dangerouslySetInnerHTML={{ __html: event.regulation || '<p>Regulamento não cadastrado.</p>' }} />
+          <Box sx={richTextSx} dangerouslySetInnerHTML={{ __html: event.regulation || '<p>Regulamento não cadastrado.</p>' }} />
         )}
         {tab === 'guide' && (
-          <Box dangerouslySetInnerHTML={{ __html: event.registrationGuide || '<p>Guia não cadastrado.</p>' }} />
+          <Box sx={richTextSx} dangerouslySetInnerHTML={{ __html: event.registrationGuide || '<p>Guia não cadastrado.</p>' }} />
         )}
         {tab === 'teams' && (
           teams.length === 0 ? (
             <EmptyState title="Nenhuma equipe aprovada ainda" />
           ) : (
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: 2 }}>
               {teams.map((team) => (
                 <TeamCard key={team.id} team={team} onClick={() => navigate(`/event/${slug}/equipe/${team.id}`)} />
               ))}

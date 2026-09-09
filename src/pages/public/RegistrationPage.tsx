@@ -35,7 +35,7 @@ import type {
   RegistrationPlayerRequest,
   RegistrationTechnicalStaffRequest,
 } from '../../types/api';
-import { formatCurrency, formatDate, staffRoleLabels } from '../../utils/format';
+import { formatCurrency, formatDate, staffRoleLabels, isRegistrationOpen } from '../../utils/format';
 
 const STEPS = ['Equipe', 'Jogadores', 'Comissão Técnica', 'Pagamento', 'WhatsApp'];
 const MAX_PLAYERS = 14;
@@ -62,6 +62,24 @@ export function RegistrationPage() {
 
   if (loadingEvent) return <Loading />;
   if (!event) return null;
+
+  if (!isRegistrationOpen(event)) {
+    return (
+      <Container maxWidth="sm" sx={{ py: 4 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
+            Inscrições Encerradas
+          </Typography>
+          <Typography variant="body2">
+            As inscrições para o evento <strong>{event.name}</strong> já foram encerradas e não é possível registrar novas equipes no momento.
+          </Typography>
+        </Alert>
+        <Button variant="outlined" onClick={() => navigate(`/event/${slug}`)}>
+          ← Voltar para a página do evento
+        </Button>
+      </Container>
+    );
+  }
 
   const canGoNextFromTeam = teamName.trim().length > 0;
 

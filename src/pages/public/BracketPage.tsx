@@ -117,7 +117,7 @@ const CARD_GAP = 50;
 const COL_W = 220;
 const COL_GAP = 40;
 const ROUND_TITLES = ['Opening round', 'Upper semi-finals', 'Upper final', 'Final'];
-const LINE_COLOR = 'rgba(230,57,70,0.62)';
+const LINE_COLOR = 'rgba(255,0,46,0.62)';
 
 const STAGE_LABELS: Record<string, string> = {
   'Opening round': 'Fase de Grupos',
@@ -284,7 +284,7 @@ function BracketMatchCard({
       <Typography
         variant="caption"
         sx={{
-          color: '#ff5964',
+          color: '#ff3349',
           display: 'block',
           mb: 1,
           fontWeight: 800,
@@ -308,7 +308,7 @@ function BracketMatchCard({
 
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
           <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Placar</Typography>
-          <Typography variant="body2" sx={{ fontWeight: 800, color: '#ff5964', fontSize: '0.8125rem' }}>
+          <Typography variant="body2" sx={{ fontWeight: 800, color: '#ff3349', fontSize: '0.8125rem' }}>
             {match.homeSetsWon ?? 0} × {match.awaySetsWon ?? 0}
           </Typography>
         </Box>
@@ -333,7 +333,7 @@ function BracketMatchCard({
             variant="body2"
             sx={{
               fontWeight: 700,
-              color: match.status === 'FINISHED' ? '#a7e3ad' : '#ff5964',
+              color: match.status === 'FINISHED' ? '#a7e3ad' : '#ff3349',
               fontSize: '0.8125rem',
             }}
           >
@@ -381,7 +381,7 @@ function BracketMatchCard({
           '&:hover': {
             transform: 'translateY(-1px)',
             boxShadow: '0 8px 20px rgba(0, 0, 0, 0.28)',
-            borderColor: '#e63946',
+            borderColor: '#ff002e',
           },
         }}
       >
@@ -403,7 +403,7 @@ function BracketMatchCard({
           isWinner={match.winnerTeamId != null && match.away?.teamId === match.winnerTeamId}
           textColor={textColor}
           mutedColor={mutedColor}
-          hoverColor="rgba(230,57,70,0.12)"
+          hoverColor="rgba(255,0,46,0.12)"
           setsWon={match.awaySetsWon}
         />
         {match.status !== 'FINISHED' && (match.court || match.scheduledAt) && (
@@ -561,8 +561,8 @@ function GroupBracket({ group, onMatchClick }: Readonly<GroupBracketProps>) {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        bgcolor: 'rgba(230,57,70,0.14)',
-                        border: '1px solid rgba(230,57,70,0.4)',
+                        bgcolor: 'rgba(255,0,46,0.14)',
+                        border: '1px solid rgba(255,0,46,0.4)',
                         borderRadius: 1,
                         px: 1.5,
                         py: 0.6,
@@ -737,16 +737,16 @@ export function BracketPage() {
             </Typography>
           </Box>
           <Stack direction="row" spacing={1} flexWrap="wrap">
-            <Button size="small" variant="outlined" startIcon={<ShareIcon />} onClick={handleShare}>
+            <Button size="small" variant="outlined" startIcon={<ShareIcon />} onClick={handleShare} sx={{ color: 'white', borderColor: 'white' }}>
               Compartilhar
             </Button>
-            <Button size="small" variant="outlined" startIcon={<LinkIcon />} onClick={handleCopyLink}>
+            <Button size="small" variant="outlined" startIcon={<LinkIcon />} onClick={handleCopyLink} sx={{ color: 'white', borderColor: 'white' }}>
               Copiar link
             </Button>
-            <Button size="small" variant="outlined" startIcon={<PictureAsPdfIcon />} onClick={handleDownloadPdf}>
+            <Button size="small" variant="outlined" startIcon={<PictureAsPdfIcon />} onClick={handleDownloadPdf} sx={{ color: 'white', borderColor: 'white' }}>
               Baixar PDF
             </Button>
-            <Button size="small" variant="outlined" startIcon={<ImageIcon />} onClick={handleDownloadImage}>
+            <Button size="small" variant="outlined" startIcon={<ImageIcon />} onClick={handleDownloadImage} sx={{ color: 'white', borderColor: 'white' }}>
               Baixar imagem
             </Button>
           </Stack>

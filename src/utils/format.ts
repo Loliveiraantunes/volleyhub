@@ -1,8 +1,13 @@
 import dayjs from 'dayjs';
+import type { Event } from '../types/api';
 
 export function formatDate(date?: string | null): string {
   if (!date) return '-';
   return dayjs(date).format('DD/MM/YYYY');
+}
+
+export function isRegistrationOpen(event: Event): boolean {
+  return event.registrationOpen && (!event.registrationEndAt || dayjs().isBefore(dayjs(event.registrationEndAt)));
 }
 
 export function formatDateTime(date?: string | null): string {

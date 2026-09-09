@@ -117,7 +117,7 @@ export function RichTextEditor({ label, value, onChange }: RichTextEditorProps) 
           </ToggleButtonGroup>
         </Box>
         <Divider />
-        <Box sx={{ p: 2, minHeight: 160, '& .ProseMirror': { outline: 'none' } }}>
+        <Box sx={{ p: 2, minHeight: 160, '& .ProseMirror': { outline: 'none' }, '& a': { color: 'primary.light' } }}>
           <EditorContent editor={editor} />
         </Box>
       </Box>

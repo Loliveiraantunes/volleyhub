@@ -63,7 +63,7 @@ export function DataTable<T>({
               sx={{
                 cursor: onRowClick ? 'pointer' : 'default',
                 '&:nth-of-type(even)': { bgcolor: '#2f3137' },
-                '&:hover': { bgcolor: 'rgba(230,57,70,0.1) !important' },
+                '&:hover': { bgcolor: 'rgba(255,0,46,0.1) !important' },
               }}
             >
               {columns.map((col) => (

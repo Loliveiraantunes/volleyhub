@@ -30,48 +30,248 @@ function MetricCard({ icon, label, value, color }: Readonly<{ icon: React.ReactN
   );
 }
 
-const podiumStyles = [
-  { label: 'Ouro', color: '#c58b00', height: 148, order: 1 },
-  { label: 'Prata', color: '#7c8796', height: 116, order: 0 },
-  { label: 'Bronze', color: '#a85d35', height: 96, order: 2 },
-] as const;
-const podiumStyleIndexByEntry = { 0: 0, 1: 1, 2: 2 } as const;
+interface PodiumEntry {
+  teamId: number;
+  teamName: string;
+  logo?: string | null;
+  points: number;
+  wins?: number | null;
+  setsWon?: number | null;
+}
 
-function Podium({ entries }: Readonly<{ entries: Array<{ teamId: number; teamName: string; logo?: string | null; points: number; wins?: number; setsWon?: number }> }>) {
+interface PodiumCardProps {
+  entry: PodiumEntry;
+  position: 'first' | 'second' | 'third';
+  colors: {
+    bg: string;
+    border: string;
+    text: string;
+  };
+}
+
+interface PodiumStylesResult {
+  avatarSize: { xs: number; sm: number; md: number };
+  avatarFontSize: { xs: string; md: string };
+  medalSize: { xs: string; md: string };
+  cardPadding: { xs: number; sm: number; md: number | string };
+  pointsFontSize: { xs: string; md: string };
+  positionFontSize: { xs: string; md: string };
+  cardFlex: { xs: string; sm: string; md: number | string };
+  cardTransform: { xs: string; md: string } | undefined;
+}
+
+function getPodiumStyles(isFirst: boolean, isSecond: boolean): PodiumStylesResult {
+  const firstTransform = { xs: 'scale(1.05) translateY(-4px)', md: 'scale(1.1) translateY(-8px)' };
+  const secondTransform = { xs: 'translateY(0px)', md: 'translateY(4px)' };
+  let cardTransform: { xs: string; md: string } | undefined;
+  if (isFirst) {
+    cardTransform = firstTransform;
+  } else if (isSecond) {
+    cardTransform = secondTransform;
+  }
+
+  return {
+    avatarSize: { xs: isFirst ? 56 : 48, sm: isFirst ? 76 : 56, md: isFirst ? 96 : 64 },
+    avatarFontSize: { xs: isFirst ? '1.5rem' : '1rem', md: isFirst ? '2.5rem' : '1.5rem' },
+    medalSize: { xs: isFirst ? '1.25rem' : '1rem', md: isFirst ? '2rem' : '1.5rem' },
+    cardPadding: { xs: 1.5, sm: 2, md: isFirst ? 3 : 2.25 },
+    pointsFontSize: { xs: isFirst ? '1.5rem' : '1.25rem', md: isFirst ? 'h5' : 'h6' },
+    positionFontSize: { xs: isFirst ? '1.25rem' : '1rem', md: isFirst ? '1.5rem' : '1.25rem' },
+    cardFlex: { xs: '1 1 calc(50% - 12px)', sm: '1 1 calc(33% - 12px)', md: isFirst ? 1.2 : 1 },
+    cardTransform,
+  };
+}
+
+function PodiumCard({ entry, position, colors }: Readonly<PodiumCardProps>) {
+  const isFirst = position === 'first';
+  const isSecond = position === 'second';
+  const medals = { first: '🥇', second: '🥈', third: '🥉' };
+  const positionLabels = { first: '1º', second: '2º', third: '3º' };
+  const zIndexMap = { first: 3, second: 2, third: 1 };
+
+  const {
+    avatarSize,
+    avatarFontSize,
+    medalSize,
+    cardPadding,
+    pointsFontSize,
+    positionFontSize,
+    cardFlex,
+    cardTransform,
+  } = getPodiumStyles(isFirst, isSecond);
+
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        flex: cardFlex,
+        background: `linear-gradient(135deg, ${colors.bg} 0%, rgba(32, 33, 38, 0.5) 100%)`,
+        border: `2px solid ${colors.border}`,
+        borderRadius: 2,
+        transition: 'all 0.3s ease',
+        zIndex: zIndexMap[position],
+        position: 'relative',
+        transform: cardTransform,
+        boxShadow: isFirst ? `0 12px 32px ${colors.border}44` : undefined,
+      }}
+    >
+      <CardContent sx={{ p: cardPadding, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Box sx={{ position: 'relative', mb: { xs: 1.25, md: 2 } }}>
+          <Avatar
+            src={entry.logo ?? undefined}
+            variant="rounded"
+            sx={{
+              width: avatarSize,
+              height: avatarSize,
+              border: `3px solid ${colors.border}`,
+              fontSize: avatarFontSize,
+              bgcolor: '#3f4248',
+            }}
+          >
+            {entry.teamName[0]}
+          </Avatar>
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: -2,
+              right: -2,
+              fontSize: medalSize,
+              lineHeight: 1,
+            }}
+          >
+            {medals[position]}
+          </Box>
+        </Box>
+
+        <Typography
+          variant={isFirst ? 'h6' : 'body2'}
+          fontWeight={900}
+          sx={{ mb: 0.5, color: colors.text, maxWidth: '90%', wordBreak: 'break-word', fontSize: { xs: '0.9rem', sm: '1rem', md: isFirst ? 'h6' : '1rem' } }}
+        >
+          {entry.teamName}
+        </Typography>
+
+        <Box sx={{ mb: { xs: 1.25, md: 2 }, width: '100%' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75, fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+            Pontos
+          </Typography>
+          <Typography
+            variant={isFirst ? 'h5' : 'h6'}
+            fontWeight={800}
+            sx={{ color: colors.text, mb: { xs: 0.75, md: 1.5 }, fontSize: pointsFontSize }}
+          >
+            {entry.points}
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            width: '100%',
+            bgcolor: 'rgba(255, 255, 255, 0.05)',
+            border: `1px solid ${colors.border}44`,
+            borderRadius: 1,
+            p: { xs: 1, md: 1.5 },
+            mb: { xs: 1, md: 1.5 },
+          }}
+        >
+          <Stack spacing={{ xs: 0.5, md: 0.75 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: 'caption' } }}>
+                Vitórias
+              </Typography>
+              <Typography variant="body2" fontWeight={700} sx={{ color: colors.text, fontSize: { xs: '0.75rem', md: 'body2' } }}>
+                {entry.wins ?? 0}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: 'caption' } }}>
+                Sets ganhos
+              </Typography>
+              <Typography variant="body2" fontWeight={700} sx={{ color: colors.text, fontSize: { xs: '0.75rem', md: 'body2' } }}>
+                {entry.setsWon ?? 0}
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
+
+        <Box
+          sx={{
+            width: '100%',
+            py: { xs: 0.75, md: 1 },
+            px: { xs: 1, md: 1.5 },
+            borderRadius: 1,
+            background: `linear-gradient(135deg, ${colors.border}22 0%, ${colors.border}11 100%)`,
+            border: `1px solid ${colors.border}`,
+          }}
+        >
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25, fontSize: { xs: '0.7rem', md: 'caption' } }}>
+            Posição
+          </Typography>
+          <Typography
+            variant="h6"
+            fontWeight={900}
+            sx={{ color: colors.text, fontSize: positionFontSize }}
+          >
+            {positionLabels[position]}
+          </Typography>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Podium({ entries }: Readonly<{ entries: PodiumEntry[] }>) {
   const topThree = entries.slice(0, 3);
   if (topThree.length === 0) return null;
 
+  const first = topThree[0];
+  const second = topThree[1] || null;
+  const third = topThree[2] || null;
+
+  const medalColors = {
+    first: { bg: 'rgba(197, 139, 0, 0.15)', border: '#c58b00', text: '#ffc107' },
+    second: { bg: 'rgba(124, 135, 150, 0.15)', border: '#7c8796', text: '#90a4ae' },
+    third: { bg: 'rgba(168, 93, 53, 0.15)', border: '#a85d35', text: '#d7783b' },
+  };
+
   return (
-    <Card variant="outlined" sx={{ mb: 4, overflow: 'hidden', background: 'linear-gradient(135deg, #464950 0%, #3f4248 100%)' }}>
-      <CardContent sx={{ p: { xs: 2, md: 3 }, '&:last-child': { pb: { xs: 2, md: 3 } } }}>
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
-          <EmojiEventsIcon color="warning" />
-          <Box>
-            <Typography variant="h6" fontWeight={800}>Pódio geral</Typography>
-            <Typography variant="body2" color="text.secondary">Os três melhores do evento</Typography>
-          </Box>
-        </Stack>
-        <Stack direction="row" alignItems="flex-end" justifyContent="center" spacing={{ xs: 0.5, sm: 2 }}>
-          {[1, 0, 2].map((entryIndex) => {
-            const entry = topThree[entryIndex];
-            const style = podiumStyles[podiumStyleIndexByEntry[entryIndex as 0 | 1 | 2]];
-            if (!entry) return <Box key={style.label} sx={{ width: { xs: 96, sm: 150 } }} />;
-            return (
-              <Stack key={entry.teamId} alignItems="center" spacing={0.75} sx={{ width: { xs: 96, sm: 150 } }}>
-                <Avatar src={entry.logo ?? undefined} variant="rounded" sx={{ width: { xs: 48, sm: 64 }, height: { xs: 48, sm: 64 }, border: `3px solid ${style.color}` }} />
-                <Typography fontWeight={800} textAlign="center" noWrap sx={{ maxWidth: '100%' }}>{entry.teamName}</Typography>
-                <Typography variant="caption" color="text.secondary" textAlign="center">
-                  {entry.points} pts · {entry.wins ?? 0} vitórias · {entry.setsWon ?? 0} sets ganhos
-                </Typography>
-                <Box sx={{ width: '100%', height: style.height, bgcolor: '#3f4248', color: style.color, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', pt: 1.5, border: `1px solid ${style.color}`, borderBottom: 0, borderRadius: '3px 3px 0 0' }}>
-                  <Typography fontWeight={900}>{style.label}</Typography>
-                </Box>
-              </Stack>
-            );
-          })}
-        </Stack>
-      </CardContent>
-    </Card>
+    <Box sx={{ mb: 4 }}>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
+        <EmojiEventsIcon sx={{ color: '#ffc107', fontSize: '1.5rem' }} />
+        <Box>
+          <Typography variant="h6" fontWeight={800}>
+            Pódio geral
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Os três melhores do evento
+          </Typography>
+        </Box>
+      </Stack>
+
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        alignItems={{ xs: 'stretch', sm: 'flex-end' }}
+        justifyContent="center"
+        spacing={{ xs: 1, sm: 1.5, md: 1.5 }}
+        sx={{
+          mb: 3,
+        }}
+      >
+        {second ? (
+          <PodiumCard entry={second} position="second" colors={medalColors.second} />
+        ) : (
+          <Box sx={{ flex: 1 }} />
+        )}
+
+        <PodiumCard entry={first} position="first" colors={medalColors.first} />
+
+        {third ? (
+          <PodiumCard entry={third} position="third" colors={medalColors.third} />
+        ) : (
+          <Box sx={{ flex: 1 }} />
+        )}
+      </Stack>
+    </Box>
   );
 }
 

@@ -6,6 +6,7 @@ import type { LoginRequest } from '../types/api';
 interface JwtPayload {
   sub?: string;
   email?: string;
+  name?: string;
   exp?: number;
   [key: string]: unknown;
 }
@@ -23,6 +24,7 @@ function decodeJwt(token: string): JwtPayload | null {
 interface AuthContextValue {
   isAuthenticated: boolean;
   adminEmail: string | null;
+  adminName: string | null;
   loading: boolean;
   login: (data: LoginRequest) => Promise<void>;
   logout: () => void;
@@ -72,18 +74,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const adminEmail = useMemo(() => {
     if (!token) return null;
     const payload = decodeJwt(token);
-    return payload?.sub ?? payload?.email ?? null;
+    return payload?.email ?? payload?.sub ?? null;
+  }, [token]);
+
+  const adminName = useMemo(() => {
+    if (!token) return null;
+    const payload = decodeJwt(token);
+    return payload?.name ?? null;
   }, [token]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       isAuthenticated: isTokenValid(token),
       adminEmail,
+      adminName,
       loading,
       login,
       logout,
     }),
-    [token, adminEmail, loading, login, logout],
+    [token, adminEmail, adminName, loading, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
