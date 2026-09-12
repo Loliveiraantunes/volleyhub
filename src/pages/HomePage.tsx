@@ -8,7 +8,7 @@ export function HomePage() {
       <Stack spacing={3} alignItems="center">
         <SportsVolleyballIcon sx={{ fontSize: 64 }} color="primary" />
         <Typography variant="h4" fontWeight={800}>
-          Volleyhub
+          Dyoni Moura
         </Typography>
         <Typography variant="body1" color="text.secondary">
           Plataforma de gerenciamento de campeonatos de vôlei. Acesse a página do seu evento pelo link

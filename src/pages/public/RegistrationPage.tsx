@@ -210,6 +210,8 @@ export function RegistrationPage() {
                 onSubmit={(data) => {
                   setPlayers((prev) => [...prev, { fullName: data.fullName, cpf: data.cpf, birthDate: data.birthDate }]);
                 }}
+                minimumAgeEnabled={event.categoryMinimumAgeEnabled}
+                minimumAge={event.categoryMinimumAge}
               />
             )}
             <Divider />

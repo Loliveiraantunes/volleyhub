@@ -36,7 +36,7 @@ function SummaryCard({ icon, label, value, color }: Readonly<{ icon: React.React
         height: '100%',
         borderTop: '3px solid #5a5e67',
         transition: 'transform 0.2s, box-shadow 0.2s',
-        '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.1)' },
+        '&:hover': { transform: 'translateY(-3px)', borderColor: 'primary.main', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.22)' },
       }}
     >
       <CardContent sx={{ height: '100%', boxSizing: 'border-box' }}>
@@ -228,7 +228,7 @@ export function DashboardPage() {
           ) : (
             <Stack spacing={2}>
               {standings.slice(0, 2).map((s) => (
-                <StandingsTable key={s.groupId} standings={{ ...s, entries: s.entries.slice(0, 4) }} />
+                <StandingsTable key={s.groupId} standings={{ ...s, entries: s.entries.slice(0, 4) }} onTeamClick={(teamId) => navigate(`/event/${selectedEvent?.slug}/equipe/${teamId}`)} />
               ))}
             </Stack>
           )}

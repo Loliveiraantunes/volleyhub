@@ -15,9 +15,10 @@ import type { GroupStandings } from '../types/api';
 
 interface StandingsTableProps {
   standings: GroupStandings;
+  onTeamClick?: (teamId: number) => void;
 }
 
-export function StandingsTable({ standings }: Readonly<StandingsTableProps>) {
+export function StandingsTable({ standings, onTeamClick }: Readonly<StandingsTableProps>) {
   return (
     <Paper variant="outlined" sx={{ width: '100%', overflow: 'hidden', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.05)' }}>
       <Stack
@@ -44,6 +45,7 @@ export function StandingsTable({ standings }: Readonly<StandingsTableProps>) {
             <TableRow sx={{ bgcolor: '#2f3137' }}>
               <TableCell width={64} sx={{ fontWeight: 800 }}>#</TableCell>
               <TableCell sx={{ fontWeight: 800 }}>Equipe</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 800 }}>Jogos</TableCell>
               <TableCell align="center" sx={{ fontWeight: 800 }}>Vitórias</TableCell>
               <TableCell align="center" sx={{ fontWeight: 800 }}>Sets ganhos</TableCell>
               <TableCell align="right" sx={{ fontWeight: 800 }}>Pontos</TableCell>
@@ -51,7 +53,15 @@ export function StandingsTable({ standings }: Readonly<StandingsTableProps>) {
           </TableHead>
           <TableBody>
             {standings.entries.map((entry) => (
-              <TableRow key={entry.teamId} hover sx={{ '&:nth-of-type(even)': { bgcolor: '#2f3137' } }}>
+              <TableRow 
+                key={entry.teamId} 
+                hover 
+                onClick={() => onTeamClick?.(entry.teamId)}
+                sx={{ 
+                  '&:nth-of-type(even)': { bgcolor: '#2f3137' },
+                  cursor: onTeamClick ? 'pointer' : 'default',
+                }}
+              >
                 <TableCell>
                   <Typography fontWeight={800} color={entry.position <= 3 ? 'primary.main' : 'text.primary'}>
                     {entry.position}
@@ -64,6 +74,9 @@ export function StandingsTable({ standings }: Readonly<StandingsTableProps>) {
                       {entry.teamName}
                     </Typography>
                   </Stack>
+                </TableCell>
+                <TableCell align="center">
+                  <Typography fontWeight={700}>{entry.totalMatches ?? '—'}</Typography>
                 </TableCell>
                 <TableCell align="center">
                   <Typography fontWeight={700}>{entry.wins ?? '—'}</Typography>

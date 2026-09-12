@@ -69,6 +69,14 @@ export const theme = createTheme(
               background: 'linear-gradient(135deg, #ff3349 0%, #ff002e 100%)',
             },
           },
+          outlined: {
+            color: '#ffffff',
+            borderColor: '#ffffff',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderColor: '#ffffff',
+            },
+          },
         },
       },
       MuiPaper: {
@@ -92,7 +100,17 @@ export const theme = createTheme(
         },
       },
       MuiChip: {
-        styleOverrides: { root: { borderRadius: 3, fontWeight: 700 } },
+        styleOverrides: {
+          root: { borderRadius: 3, fontWeight: 700 },
+          outlined: {
+            color: '#ff3349',
+            borderColor: '#ff3349',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderColor: '#ff3349',
+            },
+          },
+        },
       },
       MuiOutlinedInput: {
         styleOverrides: {
@@ -116,6 +134,21 @@ export const theme = createTheme(
           },
         },
       },
+      MuiLink: {
+        styleOverrides: {
+          root: {
+            color: '#ff3349 ',
+            '&:hover': { color: '#ff9db3' },
+          },
+        },
+      },
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            //background: 'linear-gradient(135deg, #ff002e 0%, #cc001e 100%)',
+          },
+        },
+      },
       MuiTab: {
         styleOverrides: {
           root: { color: '#d0d3da', '&.Mui-selected': { color: '#ff3349' } },
@@ -126,6 +159,48 @@ export const theme = createTheme(
       },
       MuiTableCell: {
         styleOverrides: { root: { borderColor: '#5a5e67', color: '#f2f3f5' } },
+      },
+      MuiAlert: {
+        styleOverrides: {
+          root: {
+            borderRadius: 3,
+            fontWeight: 500,
+            backgroundImage: 'linear-gradient(135deg, rgba(70, 73, 80, 0.6) 0%, rgba(58, 61, 67, 0.8) 100%)',
+            backdropFilter: 'blur(10px)',
+          },
+          standardInfo: {
+            backgroundColor: 'rgba(100, 181, 246, 0.15)',
+            color: '#64b5f6',
+            border: '1px solid rgba(100, 181, 246, 0.3)',
+            '& .MuiAlert-icon': {
+              color: '#90caf9',
+            },
+          },
+          standardSuccess: {
+            backgroundColor: 'rgba(102, 187, 106, 0.15)',
+            color: '#66bb6a',
+            border: '1px solid rgba(102, 187, 106, 0.3)',
+            '& .MuiAlert-icon': {
+              color: '#81c784',
+            },
+          },
+          standardWarning: {
+            backgroundColor: 'rgba(255, 167, 38, 0.15)',
+            color: '#ffa726',
+            border: '1px solid rgba(255, 167, 38, 0.3)',
+            '& .MuiAlert-icon': {
+              color: '#ffb74d',
+            },
+          },
+          standardError: {
+            backgroundColor: 'rgba(255, 51, 73, 0.15)',
+            color: '#ff3349',
+            border: '1px solid rgba(255, 51, 73, 0.3)',
+            '& .MuiAlert-icon': {
+              color: '#ff6680',
+            },
+          },
+        },
       },
     },
   },

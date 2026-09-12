@@ -58,7 +58,7 @@ export function EventCard({ event, categoryName, categoryMinimumAgeEnabled, cate
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          sx={{ mt: 'auto', pt: 1.25, display: 'inline-flex', alignItems: 'center', gap: 0.5, color: 'primary.main', maxWidth: '100%' }}
+          sx={{ mt: 'auto', pt: 1.25, display: 'inline-flex', alignItems: 'center', gap: 0.5, maxWidth: '100%' }}
           variant="body2"
         >
           <OpenInNewIcon fontSize="inherit" />

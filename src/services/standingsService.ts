@@ -12,8 +12,7 @@ export const standingsService = {
       entries: group.entries.map((entry) => ({
         ...entry,
         wins: entry.wins ?? entry.victories ?? entry.matchesWon ?? 0,
-        setsWon: entry.setsWon ?? entry.wonSets ?? entry.totalSetsWon ?? 0,
-      })),
+        setsWon: entry.setsWon ?? entry.wonSets ?? entry.totalSetsWon ?? 0,        totalMatches: entry.totalMatches ?? 0,      })),
     }))),
   publicBracket: async (slug: string) => {
     try {

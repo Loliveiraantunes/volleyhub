@@ -5,14 +5,14 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import GroupsIcon from '@mui/icons-material/Groups';
 import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
 import ScoreboardIcon from '@mui/icons-material/Scoreboard';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader';
 import { Loading } from '../../components/Loading';
 import { EmptyState } from '../../components/EmptyState';
 import { StandingsTable } from '../../components/StandingsTable';
 import { eventService } from '../../services/eventService';
 import { standingsService } from '../../services/standingsService';
-import type { GroupStandings } from '../../types/api';
+import type { Event, GroupStandings } from '../../types/api';
 
 function MetricCard({ icon, label, value, color }: Readonly<{ icon: React.ReactNode; label: string; value: number; color: string }>) {
   return (
@@ -37,6 +37,7 @@ interface PodiumEntry {
   points: number;
   wins?: number | null;
   setsWon?: number | null;
+  totalMatches?: number | null;
 }
 
 interface PodiumCardProps {
@@ -109,10 +110,11 @@ function PodiumCard({ entry, position, colors }: Readonly<PodiumCardProps>) {
         border: `2px solid ${colors.border}`,
         borderRadius: 2,
         transition: 'all 0.3s ease',
-        zIndex: zIndexMap[position],
+        zIndex: zIndexMap[position] + 100,
         position: 'relative',
         transform: cardTransform,
         boxShadow: isFirst ? `0 12px 32px ${colors.border}44` : undefined,
+        willChange: 'transform, box-shadow',
       }}
     >
       <CardContent sx={{ p: cardPadding, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -191,6 +193,14 @@ function PodiumCard({ entry, position, colors }: Readonly<PodiumCardProps>) {
                 {entry.setsWon ?? 0}
               </Typography>
             </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: 'caption' } }}>
+                Jogos
+              </Typography>
+              <Typography variant="body2" fontWeight={700} sx={{ color: colors.text, fontSize: { xs: '0.75rem', md: 'body2' } }}>
+                {entry.totalMatches ?? 0}
+              </Typography>
+            </Box>
           </Stack>
         </Box>
 
@@ -235,7 +245,7 @@ function Podium({ entries }: Readonly<{ entries: PodiumEntry[] }>) {
   };
 
   return (
-    <Box sx={{ mb: 4 }}>
+    <Box sx={{ mb: 4, position: 'relative', zIndex: 100 }}>
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
         <EmojiEventsIcon sx={{ color: '#ffc107', fontSize: '1.5rem' }} />
         <Box>
@@ -255,6 +265,9 @@ function Podium({ entries }: Readonly<{ entries: PodiumEntry[] }>) {
         spacing={{ xs: 1, sm: 1.5, md: 1.5 }}
         sx={{
           mb: 3,
+          position: 'relative',
+          zIndex: 100,
+          overflow: 'visible',
         }}
       >
         {second ? (
@@ -277,13 +290,18 @@ function Podium({ entries }: Readonly<{ entries: PodiumEntry[] }>) {
 
 export function AdminStandingsPage() {
   const { eventId } = useParams();
+  const navigate = useNavigate();
+  const [event, setEvent] = useState<Event | null>(null);
   const [standings, setStandings] = useState<GroupStandings[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!eventId) return;
     eventService.findById(Number(eventId))
-      .then((event) => standingsService.publicDetailedStandings(event.slug))
+      .then((e) => {
+        setEvent(e);
+        return standingsService.publicDetailedStandings(e.slug);
+      })
       .then(setStandings)
       .finally(() => setLoading(false));
   }, [eventId]);
@@ -307,8 +325,10 @@ export function AdminStandingsPage() {
   const totalTeams = new Set(standings.flatMap((group) => group.entries.map((entry) => entry.teamId))).size;
   const totalWins = enrichedStandings.flatMap((group) => group.entries).reduce((sum, entry) => sum + (entry.wins ?? 0), 0);
   const totalSetsWon = enrichedStandings.flatMap((group) => group.entries).reduce((sum, entry) => sum + (entry.setsWon ?? 0), 0);
+  const totalMatches = enrichedStandings.flatMap((group) => group.entries).reduce((sum, entry) => sum + (entry.totalMatches ?? 0), 0);
   const podiumEntries = enrichedStandings
     .flatMap((group) => group.entries)
+    .filter((entry) => (entry.wins ?? 0) > 0)
     .sort((a, b) => (
       b.points - a.points ||
       (b.wins ?? 0) - (a.wins ?? 0) ||
@@ -324,16 +344,17 @@ export function AdminStandingsPage() {
   } else {
     content = (
       <>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(5, 1fr)' }, gap: 2, mb: 4 }}>
           <MetricCard icon={<GroupsIcon />} label="Equipes" value={totalTeams} color="#1565c0" />
           <MetricCard icon={<SportsVolleyballIcon />} label="Grupos" value={standings.length} color="#2e7d32" />
           <MetricCard icon={<EmojiEventsIcon />} label="Vitórias" value={totalWins} color="#f9a825" />
           <MetricCard icon={<ScoreboardIcon />} label="Sets ganhos" value={totalSetsWon} color="#6a1b9a" />
+          <MetricCard icon={<SportsVolleyballIcon />} label="Jogos jogados" value={Math.round(totalMatches)} color="#c62828" />
         </Box>
         <Podium entries={podiumEntries} />
         <Stack spacing={3}>
           {enrichedStandings.map((standing) => (
-            <StandingsTable key={standing.groupId} standings={standing} />
+            <StandingsTable key={standing.groupId} standings={standing} onTeamClick={(teamId) => navigate(`/event/${event?.slug}/equipe/${teamId}`)} />
           ))}
         </Stack>
       </>

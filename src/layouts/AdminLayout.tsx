@@ -3,6 +3,7 @@ import {
   AppBar,
   Avatar,
   Box,
+  Chip,
   Divider,
   Drawer,
   IconButton,
@@ -30,6 +31,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSelectedEvent } from '../contexts/SelectedEventContext';
+import { Footer } from '../components/Footer';
 
 const DRAWER_WIDTH = 190;
 
@@ -66,7 +68,7 @@ export function AdminLayout() {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Toolbar sx={{ minHeight: 62, px: 1.5, background: 'linear-gradient(135deg, #1a1d22 0%, #17181c 100%)', color: 'white', borderBottom: '2px solid #ff002e', boxShadow: '0 4px 12px rgba(255, 0, 46, 0.15)' }}>
         <Typography variant="subtitle1" fontWeight={900} sx={{ letterSpacing: 0.9 }}>
-          VOLLEY<span style={{ color: '#ff3349' }}>HUB</span>
+          DYONI<span style={{ color: '#ff3349' }}>MOURA</span>
         </Typography>
       </Toolbar>
       <Divider sx={{ borderColor: 'rgba(255, 0, 46, 0.2)' }} />
@@ -134,14 +136,35 @@ export function AdminLayout() {
               <MenuIcon />
             </IconButton>
           )}
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-              Evento selecionado
-            </Typography>
-            <Typography variant="body1" fontWeight={700}>
-              {selectedEvent?.name ?? 'Nenhum evento selecionado'}
-            </Typography>
-          </Box>
+          
+          {selectedEvent ? (
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Evento:
+              </Typography>
+              <Chip
+                label={selectedEvent.name}
+                size="small"
+                sx={{
+                  bgcolor: 'rgba(255, 122, 153, 0.15)',
+                  color: '#ff7a99',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  height: 28
+                }}
+              />
+            </Stack>
+          ) : (
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                Nenhum evento
+              </Typography>
+              <Typography variant="body1" fontWeight={700} color="text.secondary">
+                Selecione um evento para começar
+              </Typography>
+            </Box>
+          )}
+          
           <Stack direction="row" spacing={1} alignItems="center">
             <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'right' }}>
               <Typography variant="body2" fontWeight={700}>
@@ -194,11 +217,12 @@ export function AdminLayout() {
         </Drawer>
       </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, bgcolor: 'background.default', minHeight: '100vh', overflowX: 'hidden' }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
         <Toolbar />
-        <Box sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
+        <Box sx={{ p: { xs: 2, sm: 3 }, minWidth: 0, flex: 1, minHeight: 0 }}>
           <Outlet />
         </Box>
+        <Footer />
       </Box>
     </Box>
   );

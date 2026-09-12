@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Avatar, Box, Chip, Container, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Avatar, Box, Chip, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import GroupsIcon from '@mui/icons-material/Groups';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -11,19 +11,46 @@ import { publicEventService } from '../../services/eventService';
 import { publicTeamService } from '../../services/teamService';
 import { publicMatchService } from '../../services/matchService';
 import { standingsService } from '../../services/standingsService';
-import type { BracketGroupTree, Event, Team, TeamDetailResponse } from '../../types/api';
+import type { BracketMatch, Event, Team, TeamDetailResponse } from '../../types/api';
 
-function findMatchIdForTeam(groups: BracketGroupTree[], teamId: number): number | null {
-  for (const group of groups) {
+function getMatchLabel(status: string, isWinner: boolean): string {
+  if (status === 'FINISHED') {
+    return isWinner ? 'Vencido' : 'Perdido';
+  }
+  if (status === 'SCHEDULED') {
+    return 'Agendado';
+  }
+  return 'Em andamento';
+}
+
+function getChipColor(status: string, isWinner: boolean): 'success' | 'error' | 'default' {
+  if (status !== 'FINISHED') return 'default';
+  return isWinner ? 'success' : 'error';
+}
+
+async function fetchTeamMatches(bracket: any[], teamId: number): Promise<BracketMatch[]> {
+  const teamMatches: BracketMatch[] = [];
+  for (const group of bracket) {
     for (const round of group.rounds) {
       for (const match of round.matches) {
         if (match.homeTeamId === teamId || match.awayTeamId === teamId) {
-          return match.matchId;
+          teamMatches.push(match);
         }
       }
     }
   }
-  return null;
+  return teamMatches;
+}
+
+async function fetchTeamRoster(
+  teamMatches: BracketMatch[],
+  teamId: number,
+  slug: string
+): Promise<TeamDetailResponse | null> {
+  if (teamMatches.length === 0) return null;
+  const firstMatch = teamMatches[0];
+  const matchData = await publicMatchService.findBySlugAndId(slug, firstMatch.matchId);
+  return matchData.homeTeam.teamId === teamId ? matchData.homeTeam : matchData.awayTeam;
 }
 
 export function TeamPage() {
@@ -32,6 +59,7 @@ export function TeamPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
   const [roster, setRoster] = useState<TeamDetailResponse | null>(null);
+  const [matches, setMatches] = useState<BracketMatch[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,13 +79,13 @@ export function TeamPage() {
         setTeam(teams.find((t) => t.id === numericTeamId) ?? null);
 
         const bracket = await standingsService.publicBracket(slug);
-        const matchId = findMatchIdForTeam(bracket, numericTeamId);
-        if (matchId != null) {
-          const matchData = await publicMatchService.findBySlugAndId(slug, matchId);
-          if (cancelled) return;
-          const teamDetail = matchData.homeTeam.teamId === numericTeamId ? matchData.homeTeam : matchData.awayTeam;
-          setRoster(teamDetail);
-        }
+        if (cancelled) return;
+
+        const teamMatches = await fetchTeamMatches(bracket, numericTeamId);
+        if (!cancelled) setMatches(teamMatches);
+
+        const teamRoster = await fetchTeamRoster(teamMatches, numericTeamId, slug);
+        if (!cancelled && teamRoster) setRoster(teamRoster);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -104,7 +132,87 @@ export function TeamPage() {
       ) : (
         <Alert severity="info">A lista de jogadores desta equipe ainda não está disponível.</Alert>
       )}
+
+      {matches.length > 0 && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
+            Partidas
+          </Typography>
+          <TableContainer component={Paper} variant="outlined">
+            <Table>
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#2f3137' }}>
+                  <TableCell sx={{ fontWeight: 800 }}>Fase</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Data</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Confronto</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 800 }}>Resultado</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 800 }}>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {matches.map((match) => {
+                  const numericTeamId = Number(teamId);
+                  const isHome = match.homeTeamId === numericTeamId;
+                  const opponent = isHome ? match.awayTeamName : match.homeTeamName;
+                  const opponentLogo = isHome ? match.awayTeamLogo : match.homeTeamLogo;
+                  const teamSets = isHome ? match.homeSetsWon : match.awaySetsWon;
+                  const opponentSets = isHome ? match.awaySetsWon : match.homeSetsWon;
+                  const isWinner = match.winnerTeamId === numericTeamId;
+                  const isFinished = match.status === 'FINISHED';
+                  const matchLabel = getMatchLabel(match.status, isWinner);
+                  const chipColor = getChipColor(match.status, isWinner);
+
+                  return (
+                    <TableRow
+                      key={match.matchId}
+                      hover
+                      onClick={() => navigate(`/event/${slug}/partida/${match.matchId}`)}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:nth-of-type(even)': { bgcolor: '#2f3137' },
+                        backgroundColor: isWinner && isFinished ? 'rgba(167, 227, 173, 0.1)' : undefined,
+                      }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                          {match.displayOrder}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {match.scheduledAt ? new Date(match.scheduledAt).toLocaleDateString('pt-BR') : '—'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Avatar src={opponentLogo ?? undefined} sx={{ width: 32, height: 32 }} variant="rounded" />
+                          <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                            {opponent || '—'}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Typography
+                          variant="body2"
+                          fontWeight={700}
+                          sx={{ color: isWinner && isFinished ? '#a7e3ad' : 'text.primary' }}
+                        >
+                          {isFinished ? `${teamSets} x ${opponentSets}` : '—'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip label={matchLabel} size="small" variant="outlined" color={chipColor} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      )}
     </Container>
   );
 }
+
 

@@ -119,7 +119,7 @@ export function EventCategoriesPage() {
       />
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 3 }}>
-        <Card variant="outlined" sx={{ borderTop: '3px solid #5a5e67', transition: 'border-color 0.2s', '&:hover': { borderTopColor: 'primary.main' } }}>
+        <Card variant="outlined" sx={{ borderTop: '3px solid #5a5e67', transition: 'transform 0.2s, box-shadow 0.2s', '&:hover': { transform: 'translateY(-3px)', borderColor: 'primary.main', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.22)' } }}>
           <CardContent>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <CategoryIcon sx={{ color: '#d0d3da' }} />
@@ -130,7 +130,7 @@ export function EventCategoriesPage() {
             </Stack>
           </CardContent>
         </Card>
-        <Card variant="outlined" sx={{ borderTop: '3px solid #5a5e67', transition: 'border-color 0.2s', '&:hover': { borderTopColor: 'primary.main' } }}>
+        <Card variant="outlined" sx={{ borderTop: '3px solid #5a5e67', transition: 'transform 0.2s, box-shadow 0.2s', '&:hover': { transform: 'translateY(-3px)', borderColor: 'primary.main', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.22)' } }}>
           <CardContent>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <CheckCircleIcon sx={{ color: '#d0d3da' }} />
@@ -141,7 +141,7 @@ export function EventCategoriesPage() {
             </Stack>
           </CardContent>
         </Card>
-        <Card variant="outlined" sx={{ borderTop: '3px solid #5a5e67', transition: 'border-color 0.2s', '&:hover': { borderTopColor: 'primary.main' } }}>
+        <Card variant="outlined" sx={{ borderTop: '3px solid #5a5e67', transition: 'transform 0.2s, box-shadow 0.2s', '&:hover': { transform: 'translateY(-3px)', borderColor: 'primary.main', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.22)' } }}>
           <CardContent>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <FilterAltIcon sx={{ color: '#d0d3da' }} />

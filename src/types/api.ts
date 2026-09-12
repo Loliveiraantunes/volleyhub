@@ -30,6 +30,9 @@ export interface Event {
   coverImage?: string | null;
   gender: EventGender;
   categoryId: number;
+  categoryName?: string;
+  categoryMinimumAgeEnabled?: boolean;
+  categoryMinimumAge?: number | null;
   description?: string | null;
   regulation?: string | null;
   registrationGuide?: string | null;
@@ -185,6 +188,7 @@ export interface StandingsEntry {
   setsWon?: number;
   wonSets?: number;
   totalSetsWon?: number;
+  totalMatches?: number;
 }
 
 export interface GroupStandings {

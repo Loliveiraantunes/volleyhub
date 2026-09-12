@@ -4,13 +4,34 @@ import { z } from 'zod';
 import { Button, Grid, TextField } from '@mui/material';
 import type { PlayerRequest } from '../types/api';
 
-const schema = z.object({
-  fullName: z.string().min(1, 'Informe o nome completo'),
-  cpf: z.string().optional().nullable(),
-  birthDate: z.string().optional().nullable(),
-});
+function createSchema(minimumAgeEnabled?: boolean, minimumAge?: number | null) {
+  return z.object({
+    fullName: z.string().min(1, 'Informe o nome completo'),
+    cpf: z.string().optional().nullable(),
+    birthDate: z.string().optional().nullable()
+      .refine(
+        (date) => {
+          if (!minimumAgeEnabled || !minimumAge || !date) return true;
+          
+          const birthDate = new Date(date);
+          const today = new Date();
+          let age = today.getFullYear() - birthDate.getFullYear();
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+          }
+          
+          return age >= minimumAge;
+        },
+        {
+          message: `Jogadores devem ter no mínimo ${minimumAge} anos para esta categoria`,
+        }
+      ),
+  });
+}
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof createSchema>>;
 
 function formatCpfInput(value: string | null | undefined) {
   const digits = (value ?? '').replace(/\D/g, '').slice(0, 11);
@@ -22,16 +43,18 @@ function formatCpfInput(value: string | null | undefined) {
 
 interface PlayerFormProps {
   onSubmit: (data: PlayerRequest) => Promise<void> | void;
+  minimumAgeEnabled?: boolean;
+  minimumAge?: number | null;
 }
 
-export function PlayerForm({ onSubmit }: Readonly<PlayerFormProps>) {
+export function PlayerForm({ onSubmit, minimumAgeEnabled, minimumAge }: Readonly<PlayerFormProps>) {
   const {
     control,
     register,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { fullName: '', cpf: '', birthDate: '' } });
+  } = useForm<FormData>({ resolver: zodResolver(createSchema(minimumAgeEnabled, minimumAge)), defaultValues: { fullName: '', cpf: '', birthDate: '' } });
 
   const submit = async (data: FormData) => {
     await onSubmit(data);
@@ -73,6 +96,8 @@ export function PlayerForm({ onSubmit }: Readonly<PlayerFormProps>) {
             type="date"
             fullWidth
             size="small"
+            error={!!errors.birthDate}
+            helperText={errors.birthDate?.message}
             InputLabelProps={{ shrink: true }}
             {...register('birthDate')}
           />

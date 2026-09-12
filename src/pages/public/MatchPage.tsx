@@ -78,10 +78,10 @@ export function MatchPage() {
       <Box sx={{ mb: 3 }}>
         <Chip
           icon={<ArrowBackIcon />}
-          label="Voltar para a chave"
+          label="Voltar"
           color="primary"
           variant="outlined"
-          onClick={() => navigate(`/event/${slug}/chave`)}
+          onClick={() => navigate(-1)}
           clickable
           sx={{ mb: 2 }}
         />

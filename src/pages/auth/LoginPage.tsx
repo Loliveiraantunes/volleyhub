@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Alert, Avatar, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
-import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
+import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -44,15 +43,20 @@ export function LoginPage() {
 
   return (
     <Paper variant="outlined" sx={{ p: 4 }}>
-      <Stack alignItems="center" spacing={1} sx={{ mb: 3 }}>
-        <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
-          <SportsVolleyballIcon />
-        </Avatar>
+      <Stack alignItems="center" spacing={2} sx={{ mb: 4 }}>
+        <img
+          src="/logo.svg"
+          alt="Dyoni Moura Logo"
+          style={{
+            height: '80px',
+            width: 'auto',
+          }}
+        />
         <Typography variant="h5" fontWeight={800}>
-          Volleyhub
+          Acesse o Painel
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Acesse o painel administrativo
+          Gerenciamento de campeonatos de vôlei
         </Typography>
       </Stack>
 
