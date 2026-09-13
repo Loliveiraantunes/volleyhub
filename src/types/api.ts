@@ -191,10 +191,27 @@ export interface StandingsEntry {
   totalMatches?: number;
 }
 
+export interface UnclassifiedMatch {
+  matchId: number;
+  homeTeamId: number;
+  homeTeamName: string;
+  homeTeamLogo?: string | null;
+  awayTeamId: number;
+  awayTeamName: string;
+  awayTeamLogo?: string | null;
+  homeSetsWon: number;
+  awaySetsWon: number;
+  winnerTeamId?: number | null;
+  status: MatchStatus;
+  scheduledAt?: string | null;
+  court?: string | null;
+}
+
 export interface GroupStandings {
   groupId: number;
   groupName: string;
   entries: StandingsEntry[];
+  unclassifiedMatches?: UnclassifiedMatch[];
 }
 
 export interface BracketTeam {

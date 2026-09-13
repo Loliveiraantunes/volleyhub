@@ -238,6 +238,30 @@ export function GroupsPage() {
     });
   };
 
+  const openCreateMatch = () => {
+    setEditingMatch({
+      id: 0,
+      eventId: Number(eventId),
+      groupId: null,
+      homeTeamId: null,
+      awayTeamId: null,
+      scheduledAt: null,
+      court: null,
+      status: 'AWAITING',
+      stage: 'GROUP_STAGE',
+      homeSetsWon: 0,
+      awaySetsWon: 0,
+      sets: [],
+    } as unknown as Match);
+    setEditMatchData({
+      groupId: '',
+      homeTeamId: null,
+      awayTeamId: null,
+      scheduledAt: '',
+      court: '',
+    });
+  };
+
   const updateEditMatchData = (field: keyof typeof editMatchData, value: string | number | null) => {
     setEditMatchData((prev) => ({ ...prev, [field]: value }));
   };
@@ -255,24 +279,45 @@ export function GroupsPage() {
 
     setSavingMatch(true);
     try {
-      const updated = await matchService.update(editingMatch.id, {
-        groupId: editMatchData.groupId === '' ? null : editMatchData.groupId,
-        homeTeamId: editMatchData.homeTeamId,
-        awayTeamId: editMatchData.awayTeamId,
-        scheduledAt: editMatchData.scheduledAt ? dayjs(editMatchData.scheduledAt).toISOString() : null,
-        court: editMatchData.court || null,
-        status: editingMatch.status,
-        sets: editingMatch.sets.map((set) => ({
-          setNumber: set.setNumber,
-          homePoints: set.homePoints,
-          awayPoints: set.awayPoints,
-        })),
-      });
-      setMatches((prev) => prev.map((match) => (match.id === updated.id ? updated : match)));
+      if (editingMatch.id === 0) {
+        // Create new match
+        if (!eventId || editMatchData.homeTeamId === null || editMatchData.awayTeamId === null) {
+          enqueueSnackbar('Preencha todos os campos obrigatórios.', { variant: 'warning' });
+          setSavingMatch(false);
+          return;
+        }
+        const created = await matchService.create(Number(eventId), {
+          groupId: editMatchData.groupId === '' ? null : Number(editMatchData.groupId),
+          homeTeamId: editMatchData.homeTeamId,
+          awayTeamId: editMatchData.awayTeamId,
+          scheduledAt: editMatchData.scheduledAt ? dayjs(editMatchData.scheduledAt).toISOString() : null,
+          court: editMatchData.court || null,
+          status: 'AWAITING',
+          sets: [],
+        });
+        setMatches((prev) => [...prev, created]);
+        enqueueSnackbar('Confronto criado com sucesso.', { variant: 'success' });
+      } else {
+        // Update existing match
+        const updated = await matchService.update(editingMatch.id, {
+          groupId: editMatchData.groupId === '' ? null : editMatchData.groupId,
+          homeTeamId: editMatchData.homeTeamId,
+          awayTeamId: editMatchData.awayTeamId,
+          scheduledAt: editMatchData.scheduledAt ? dayjs(editMatchData.scheduledAt).toISOString() : null,
+          court: editMatchData.court || null,
+          status: editingMatch.status,
+          sets: editingMatch.sets.map((set) => ({
+            setNumber: set.setNumber,
+            homePoints: set.homePoints,
+            awayPoints: set.awayPoints,
+          })),
+        });
+        setMatches((prev) => prev.map((match) => (match.id === updated.id ? updated : match)));
+        enqueueSnackbar('Confronto atualizado.', { variant: 'success' });
+      }
       setEditingMatch(null);
-      enqueueSnackbar('Confronto atualizado.', { variant: 'success' });
     } catch (err) {
-      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível atualizar o confronto.', {
+      enqueueSnackbar((err as { message?: string }).message ?? 'Não foi possível salvar o confronto.', {
         variant: 'error',
       });
     } finally {
@@ -429,16 +474,25 @@ export function GroupsPage() {
   }
 
   let matchesContent: React.ReactNode = null;
-  if (!loading && matches.length > 0) {
+  if (!loading) {
     const visibleMatches = matches.filter((match) => (
       matchTab === 'FINISHED' ? match.status === 'FINISHED' : match.status !== 'FINISHED'
     ));
     const sortedGroupsForMatches = [...groups].sort((a, b) => a.displayOrder - b.displayOrder);
     matchesContent = (
       <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
-          Confrontos
-        </Typography>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+          <Typography variant="h6" fontWeight={800}>
+            Confrontos
+          </Typography>
+          <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={openCreateMatch}>
+            Adicionar confronto
+          </Button>
+        </Stack>
+        {matches.length === 0 ? (
+          <EmptyState title="Nenhum confronto criado" description="Crie ou gere confrontos para começar." />
+        ) : (
+          <>
         <Tabs value={matchTab} onChange={(_, value: 'OPEN' | 'FINISHED') => setMatchTab(value)} variant="scrollable" scrollButtons={false} sx={{ mb: 2 }}>
           <Tab value="OPEN" label={`Não finalizados (${matches.filter((match) => match.status !== 'FINISHED').length})`} />
           <Tab value="FINISHED" label={`Finalizados (${matches.filter((match) => match.status === 'FINISHED').length})`} />
@@ -583,7 +637,108 @@ export function GroupsPage() {
               </Paper>
               );
             })}
+            {/* Confrontos sem grupo */}
+            {(() => {
+              const unassignedMatches = visibleMatches.filter((m) => !m.groupId);
+              if (unassignedMatches.length === 0) return null;
+              return (
+                <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+                  <Box
+                    sx={{
+                      px: 2.5,
+                      py: 1.5,
+                      bgcolor: alpha(theme.palette.primary.main, 0.04),
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Typography sx={{ fontWeight: 800, fontSize: 15 }}>Sem grupo</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {unassignedMatches.length} confronto{unassignedMatches.length !== 1 ? 's' : ''}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ bgcolor: 'background.default', p: 2 }}>
+                    <Stack spacing={1}>
+                      {unassignedMatches.map((match) => {
+                        const homeTeam = teamsById.get(match.homeTeamId);
+                        const awayTeam = teamsById.get(match.awayTeamId);
+                        return (
+                          <Box
+                            key={match.id}
+                            sx={{
+                              display: 'grid',
+                              gridTemplateColumns: { xs: '1fr 1fr 1fr', md: 'auto 1fr auto 60px auto 1fr auto 108px' },
+                              gap: 1,
+                              alignItems: 'center',
+                              p: 1.5,
+                              bgcolor: 'background.paper',
+                              border: `1px solid ${theme.palette.divider}`,
+                              borderRadius: 1,
+                            }}
+                          >
+                            <StatusBadge status={match.status} />
+                            <Typography variant="caption" color="text.secondary" noWrap>
+                              {matchStageLabels[match.stage ?? 'GROUP_STAGE'] ?? match.stage ?? 'Fase de Grupos'}
+                            </Typography>
+
+                            <Stack
+                              alignItems="center"
+                              spacing={0.5}
+                              sx={{ width: { xs: '100%', md: 180 }, maxWidth: '100%', minWidth: 0, justifySelf: { xs: 'stretch', md: 'end' }, gridColumn: { xs: '1', md: 'auto' } }}
+                            >
+                              <Avatar src={homeTeam?.logo ?? undefined} variant="rounded" sx={{ width: 44, height: 44, flexShrink: 0 }} />
+                              <Typography noWrap fontWeight={800} variant="body1" textAlign="center" sx={{ maxWidth: '100%' }}>
+                                {homeTeam?.name ?? 'TBD'}
+                              </Typography>
+                            </Stack>
+
+                            <Box sx={{ flexShrink: 0, textAlign: 'center', minWidth: 0, alignSelf: 'center', gridColumn: { xs: '2', md: 'auto' } }}>
+                              <Typography variant="h6" fontWeight={900} lineHeight={1}>
+                                {match.homeSetsWon}
+                                <Typography component="span" color="text.disabled" sx={{ mx: 0.5, fontWeight: 400 }}>×</Typography>
+                                {match.awaySetsWon}
+                              </Typography>
+                            </Box>
+
+                            <Stack
+                              alignItems="center"
+                              spacing={0.5}
+                              sx={{ width: { xs: '100%', md: 180 }, maxWidth: '100%', minWidth: 0, justifySelf: { xs: 'stretch', md: 'start' }, gridColumn: { xs: '3', md: 'auto' } }}
+                            >
+                              <Avatar src={awayTeam?.logo ?? undefined} variant="rounded" sx={{ width: 44, height: 44, flexShrink: 0 }} />
+                              <Typography noWrap fontWeight={800} variant="body1" textAlign="center" sx={{ maxWidth: '100%' }}>
+                                {awayTeam?.name ?? 'TBD'}
+                              </Typography>
+                            </Stack>
+
+                            <Typography variant="caption" color="text.secondary" noWrap sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}>
+                              {match.scheduledAt ? dayjs(match.scheduledAt).format('DD/MM HH:mm') : 'Sem data'}
+                            </Typography>
+
+                            <Stack direction="row" spacing={0.25} sx={{ width: { xs: '100%', md: 108 }, justifyContent: 'flex-end', gridColumn: { xs: '1 / -1', md: 'auto' } }}>
+                              <IconButton size="small" color="info" title="Súmula" onClick={() => openSummary(match)}>
+                                <AssignmentIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton size="small" color="primary" title="Editar confronto" onClick={() => openEditMatch(match)}>
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton size="small" color="error" title="Excluir confronto" onClick={() => setDeleteMatchTarget(match.id)}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
+                          </Box>
+                        );
+                      })}
+                    </Stack>
+                  </Box>
+                </Paper>
+              );
+            })()}
           </Stack>
+        )}
+          </>
         )}
       </Box>
     );
@@ -691,7 +846,7 @@ export function GroupsPage() {
       </Dialog>
 
       <Dialog open={!!editingMatch} onClose={() => !savingMatch && setEditingMatch(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>Editar confronto</DialogTitle>
+        <DialogTitle>{editingMatch?.id === 0 ? 'Novo confronto' : 'Editar confronto'}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ pt: 0.5 }}>
             <TextField
@@ -764,18 +919,26 @@ export function GroupsPage() {
           <Button onClick={() => setEditingMatch(null)} disabled={savingMatch}>
             Cancelar
           </Button>
-          <Button
-            variant="contained"
-            onClick={handleSaveMatch}
-            disabled={
-              savingMatch ||
-              (editMatchData.homeTeamId !== null &&
-                editMatchData.awayTeamId !== null &&
-                editMatchData.homeTeamId === editMatchData.awayTeamId)
-            }
-          >
-            {savingMatch ? 'Salvando...' : 'Salvar'}
-          </Button>
+          {(() => {
+            const isCreating = editingMatch?.id === 0;
+            const isSaving = savingMatch;
+            const isCreate = isCreating ? 'Criar' : 'Salvar';
+            const buttonLabel = isSaving ? 'Salvando...' : isCreate;
+            return (
+              <Button
+                variant="contained"
+                onClick={handleSaveMatch}
+                disabled={
+                  savingMatch ||
+                  (editMatchData.homeTeamId !== null &&
+                    editMatchData.awayTeamId !== null &&
+                    editMatchData.homeTeamId === editMatchData.awayTeamId)
+                }
+              >
+                {buttonLabel}
+              </Button>
+            );
+          })()}
         </DialogActions>
       </Dialog>
 

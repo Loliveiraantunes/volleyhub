@@ -62,11 +62,24 @@ export const theme = createTheme(
       MuiButton: {
         defaultProps: { disableElevation: true },
         styleOverrides: {
-          root: { textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 800, borderRadius: 3 },
+          root: { 
+            textTransform: 'uppercase', 
+            letterSpacing: 0.4, 
+            fontWeight: 800, 
+            borderRadius: 3,
+           
+          },
           contained: {
             background: 'linear-gradient(135deg, #ff002e 0%, #cc001e 100%)',
             '&:hover': {
               background: 'linear-gradient(135deg, #ff3349 0%, #ff002e 100%)',
+            },
+            '&:disabled': {
+              color: 'rgb(212, 212, 212)',
+              background: 'linear-gradient(135deg, rgba(70, 73, 80, 0.8) 0%, rgba(58, 61, 67, 0.9) 100%)',
+              borderColor: 'rgba(100, 100, 100, 0.3)',
+              cursor: 'not-allowed !important',
+              pointerEvents: 'none',
             },
           },
           outlined: {
@@ -103,7 +116,7 @@ export const theme = createTheme(
         styleOverrides: {
           root: { borderRadius: 3, fontWeight: 700 },
           outlined: {
-            color: '#ff3349',
+            color: '#f2f3f5',
             borderColor: '#ff3349',
             '&:hover': {
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -118,11 +131,53 @@ export const theme = createTheme(
             borderRadius: 3,
             color: '#f2f3f5',
             background: 'linear-gradient(135deg, rgba(63, 66, 72, 0.5) 0%, rgba(58, 61, 67, 0.7) 100%)',
+            '& input': {
+              color: '#f2f3f5',
+              '&:-webkit-autofill': {
+                WebkitBoxShadow: '0 0 0 1000px #3a3d43 inset',
+                WebkitTextFillColor: '#f2f3f5',
+              },
+            },
             '&:hover .MuiOutlinedInput-notchedOutline': {
               borderColor: 'rgba(255, 0, 46, 0.3)',
             },
           },
           notchedOutline: { borderColor: '#727782' },
+          input: {
+            color: '#f2f3f5',
+            '&::placeholder': {
+              color: 'rgba(255, 51, 73, 0.7)',
+              opacity: 1,
+            },
+            '&:-webkit-autofill': {
+              WebkitBoxShadow: '0 0 0 1000px #3a3d43 inset',
+              WebkitTextFillColor: '#f2f3f5',
+            },
+          },
+        },
+      },
+      MuiInputBase: {
+        styleOverrides: {
+          root: {
+            color: '#f2f3f5',
+            '& input': {
+              color: '#f2f3f5',
+              '&:-webkit-autofill': {
+                WebkitBoxShadow: '0 0 0 1000px #3a3d43 inset',
+                WebkitTextFillColor: '#f2f3f5',
+              },
+            },
+            '& textarea': {
+              color: '#f2f3f5',
+            },
+          },
+          input: {
+            color: '#f2f3f5',
+            '&:-webkit-autofill': {
+              WebkitBoxShadow: '0 0 0 1000px #3a3d43 inset',
+              WebkitTextFillColor: '#f2f3f5',
+            },
+          },
         },
       },
       MuiIconButton: {

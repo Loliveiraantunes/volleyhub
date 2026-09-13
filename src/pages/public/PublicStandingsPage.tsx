@@ -313,6 +313,55 @@ export function PublicStandingsPage() {
       .finally(() => setLoading(false));
   }, [slug]);
 
+  // Extrair confrontos não classificados para incluir na classificação
+  const allUnclassifiedMatches = standings.flatMap((s) => s.unclassifiedMatches ?? []);
+  
+  // Calcular pontos dos times nos confrontos não classificados
+  const unclassifiedTeamsStats = new Map<number, { teamId: number; teamName: string; logo?: string | null; wins: number; setsWon: number; totalMatches: number; points: number }>();
+  
+  allUnclassifiedMatches.forEach((match) => {
+    // Inicializar times se não existirem
+    if (!unclassifiedTeamsStats.has(match.homeTeamId)) {
+      unclassifiedTeamsStats.set(match.homeTeamId, {
+        teamId: match.homeTeamId,
+        teamName: match.homeTeamName,
+        logo: match.homeTeamLogo,
+        wins: 0,
+        setsWon: 0,
+        totalMatches: 0,
+        points: 0,
+      });
+    }
+    if (!unclassifiedTeamsStats.has(match.awayTeamId)) {
+      unclassifiedTeamsStats.set(match.awayTeamId, {
+        teamId: match.awayTeamId,
+        teamName: match.awayTeamName,
+        logo: match.awayTeamLogo,
+        wins: 0,
+        setsWon: 0,
+        totalMatches: 0,
+        points: 0,
+      });
+    }
+
+    // Atualizar stats
+    const homeStats = unclassifiedTeamsStats.get(match.homeTeamId)!;
+    const awayStats = unclassifiedTeamsStats.get(match.awayTeamId)!;
+
+    homeStats.totalMatches += 1;
+    awayStats.totalMatches += 1;
+    homeStats.setsWon += match.homeSetsWon;
+    awayStats.setsWon += match.awaySetsWon;
+
+    if (match.winnerTeamId === match.homeTeamId) {
+      homeStats.wins += 1;
+      homeStats.points += 3;
+    } else if (match.winnerTeamId === match.awayTeamId) {
+      awayStats.wins += 1;
+      awayStats.points += 3;
+    }
+  });
+
   if (loading) return <Loading />;
   if (!event) return <EmptyState title="Evento não encontrado" />;
 
@@ -322,23 +371,77 @@ export function PublicStandingsPage() {
         Classificação — {event.name}
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>Ranking por pontos, vitórias e sets ganhos</Typography>
-      {standings.length === 0 ? (
+      {standings.length === 0 && allUnclassifiedMatches.length === 0 ? (
         <EmptyState title="Classificação ainda não disponível" />
       ) : (
         <>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
-            <MetricCard icon={<GroupsIcon />} label="Equipes" value={standings.reduce((total, group) => total + group.entries.length, 0)} color="#1565c0" />
-            <MetricCard icon={<EmojiEventsIcon />} label="Vitórias" value={standings.flatMap((group) => group.entries).reduce((total, entry) => total + (entry.wins ?? 0), 0)} color="#f9a825" />
-            <MetricCard icon={<ScoreboardIcon />} label="Sets ganhos" value={standings.flatMap((group) => group.entries).reduce((total, entry) => total + (entry.setsWon ?? 0), 0)} color="#6a1b9a" />
-            <MetricCard icon={<SportsVolleyballIcon />} label="Jogos jogados" value={Math.round(standings.flatMap((group) => group.entries).reduce((total, entry) => total + (entry.totalMatches ?? 0), 0))} color="#c62828" />
+            <MetricCard 
+              icon={<GroupsIcon />} 
+              label="Equipes" 
+              value={new Set([
+                ...standings.flatMap((group) => group.entries.map((entry) => entry.teamId)),
+                ...unclassifiedTeamsStats.keys(),
+              ]).size} 
+              color="#1565c0" 
+            />
+            <MetricCard 
+              icon={<EmojiEventsIcon />} 
+              label="Vitórias" 
+              value={standings.flatMap((group) => group.entries).reduce((total, entry) => total + (entry.wins ?? 0), 0) + Array.from(unclassifiedTeamsStats.values()).reduce((sum, t) => sum + t.wins, 0)} 
+              color="#f9a825" 
+            />
+            <MetricCard 
+              icon={<ScoreboardIcon />} 
+              label="Sets ganhos" 
+              value={standings.flatMap((group) => group.entries).reduce((total, entry) => total + (entry.setsWon ?? 0), 0) + Array.from(unclassifiedTeamsStats.values()).reduce((sum, t) => sum + t.setsWon, 0)} 
+              color="#6a1b9a" 
+            />
+            <MetricCard 
+              icon={<SportsVolleyballIcon />} 
+              label="Jogos jogados" 
+              value={Math.round(standings.flatMap((group) => group.entries).reduce((total, entry) => total + (entry.totalMatches ?? 0), 0) + Array.from(unclassifiedTeamsStats.values()).reduce((sum, t) => sum + t.totalMatches, 0))} 
+              color="#c62828" 
+            />
           </Box>
           <Podium standings={standings} />
           <Stack spacing={3}>
-          {standings.map((s) => (
-            <StandingsTable key={s.groupId} standings={s} onTeamClick={(teamId) => navigate(`/event/${slug}/equipe/${teamId}`)} />
-          ))}
-          </Stack>
-        </>
+            {standings.filter(s => (s.entries?.length ?? 0) > 0).map((s) => (
+              <StandingsTable key={s.groupId} standings={s} onTeamClick={(teamId) => navigate(`/event/${slug}/equipe/${teamId}`)} />
+            ))}
+            {(() => {
+              if (allUnclassifiedMatches.length === 0) return null;
+              
+              // Create a GroupStandings-like object for unclassified matches
+              const unclassifiedGroup: GroupStandings = {
+                groupId: 0,
+                groupName: 'Jogos Livres',
+                entries: Array.from(unclassifiedTeamsStats.values())
+                  .map((stat, index) => ({
+                    position: index + 1,
+                    teamId: stat.teamId,
+                    teamName: stat.teamName,
+                    logo: stat.logo,
+                    points: stat.points,
+                    wins: stat.wins,
+                    setsWon: stat.setsWon,
+                    totalMatches: stat.totalMatches,
+                    victories: stat.wins,
+                    matchesWon: stat.wins,
+                    wonSets: stat.setsWon,
+                  }))
+                  .sort((a, b) => (
+                    b.points - a.points ||
+                    (b.wins ?? 0) - (a.wins ?? 0) ||
+                    (b.setsWon ?? 0) - (a.setsWon ?? 0) ||
+                    a.teamName.localeCompare(b.teamName)
+                  )),
+              };
+              
+              return <StandingsTable standings={unclassifiedGroup} onTeamClick={(teamId) => navigate(`/event/${slug}/equipe/${teamId}`)} />;
+            })()}
+            </Stack>
+          </>
       )}
     </Container>
   );

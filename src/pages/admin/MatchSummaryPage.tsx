@@ -345,7 +345,6 @@ export function MatchSummaryPage() {
           </Button>
           <Button
             variant="contained"
-            color="primary"
             onClick={() => setConfirmOpen(true)}
             disabled={saving || sets.length === 0 || hasUnsavedSetChanges}
           >

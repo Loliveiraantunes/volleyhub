@@ -79,7 +79,7 @@ export function DashboardPage() {
     Promise.all([
       teamService.listByEvent(selectedEvent.id),
       matchService.listByEvent(selectedEvent.id),
-      standingsService.adminStandings(selectedEvent.id),
+      standingsService.publicDetailedStandings(selectedEvent.slug),
     ])
       .then(async ([teamsData, matchesData, standingsData]) => {
         if (cancelled) return;
@@ -223,15 +223,96 @@ export function DashboardPage() {
           <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
             Classificação resumida
           </Typography>
-          {standings.length === 0 ? (
-            <EmptyState title="Classificação ainda não disponível" />
-          ) : (
-            <Stack spacing={2}>
-              {standings.slice(0, 2).map((s) => (
-                <StandingsTable key={s.groupId} standings={{ ...s, entries: s.entries.slice(0, 4) }} onTeamClick={(teamId) => navigate(`/event/${selectedEvent?.slug}/equipe/${teamId}`)} />
-              ))}
-            </Stack>
-          )}
+          {(() => {
+            // Extract all unclassified matches and calculate team stats
+            const allUnclassifiedMatches = standings.flatMap((s) => s.unclassifiedMatches ?? []);
+            const unclassifiedTeamsStats = new Map<number, { teamId: number; teamName: string; logo?: string | null; wins: number; setsWon: number; totalMatches: number; points: number }>();
+            
+            allUnclassifiedMatches.forEach((match) => {
+              if (!unclassifiedTeamsStats.has(match.homeTeamId)) {
+                unclassifiedTeamsStats.set(match.homeTeamId, {
+                  teamId: match.homeTeamId,
+                  teamName: match.homeTeamName,
+                  logo: match.homeTeamLogo,
+                  wins: 0,
+                  setsWon: 0,
+                  totalMatches: 0,
+                  points: 0,
+                });
+              }
+              if (!unclassifiedTeamsStats.has(match.awayTeamId)) {
+                unclassifiedTeamsStats.set(match.awayTeamId, {
+                  teamId: match.awayTeamId,
+                  teamName: match.awayTeamName,
+                  logo: match.awayTeamLogo,
+                  wins: 0,
+                  setsWon: 0,
+                  totalMatches: 0,
+                  points: 0,
+                });
+              }
+
+              const homeStats = unclassifiedTeamsStats.get(match.homeTeamId)!;
+              const awayStats = unclassifiedTeamsStats.get(match.awayTeamId)!;
+
+              homeStats.totalMatches += 1;
+              awayStats.totalMatches += 1;
+              homeStats.setsWon += match.homeSetsWon;
+              awayStats.setsWon += match.awaySetsWon;
+
+              if (match.winnerTeamId === match.homeTeamId) {
+                homeStats.wins += 1;
+                homeStats.points += 3;
+              } else if (match.winnerTeamId === match.awayTeamId) {
+                awayStats.wins += 1;
+                awayStats.points += 3;
+              }
+            });
+
+            // Filter out empty standings and add unclassified games if available
+            const filteredStandings = standings.filter(s => (s.entries?.length ?? 0) > 0);
+            const displayStandings = [...filteredStandings];
+            
+            if (allUnclassifiedMatches.length > 0 && unclassifiedTeamsStats.size > 0) {
+              const unclassifiedGroup = {
+                groupId: 0,
+                groupName: 'Jogos Livres',
+                entries: Array.from(unclassifiedTeamsStats.values())
+                  .map((stat, index) => ({
+                    position: index + 1,
+                    teamId: stat.teamId,
+                    teamName: stat.teamName,
+                    logo: stat.logo,
+                    points: stat.points,
+                    wins: stat.wins,
+                    setsWon: stat.setsWon,
+                    totalMatches: stat.totalMatches,
+                    victories: stat.wins,
+                    matchesWon: stat.wins,
+                    wonSets: stat.setsWon,
+                  }))
+                  .sort((a, b) => (
+                    b.points - a.points ||
+                    (b.wins ?? 0) - (a.wins ?? 0) ||
+                    (b.setsWon ?? 0) - (a.setsWon ?? 0) ||
+                    a.teamName.localeCompare(b.teamName)
+                  )),
+              };
+              displayStandings.push(unclassifiedGroup);
+            }
+
+            if (displayStandings.length === 0) {
+              return <EmptyState title="Classificação ainda não disponível" />;
+            }
+
+            return (
+              <Stack spacing={2}>
+                {displayStandings.slice(0, 2).map((s) => (
+                  <StandingsTable key={s.groupId} standings={{ ...s, entries: s.entries.slice(0, 4) }} onTeamClick={(teamId) => navigate(`/event/${selectedEvent?.slug}/equipe/${teamId}`)} />
+                ))}
+              </Stack>
+            );
+          })()}
         </Box>
       </Box>
 
